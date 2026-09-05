@@ -1,0 +1,12 @@
+{
+  "title": "SkyGuard AI | Weather Station Intelligence",
+  "description": "SkyGuard AI real-time anomaly detection and trusted-data dashboard for automatic weather stations.",
+  "language": "en",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": true,
+    "ignoreReducedMotion": false
+  }
+}

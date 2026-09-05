@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.pytest_runtime/
+*.pyc
+skyguard.db
+skyguard.db-shm
+skyguard.db-wal
+uvicorn-qa.*.log
+.env

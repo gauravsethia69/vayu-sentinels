@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: skyguard-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: SKYGUARD_MQTT_HOST
+        value: 2a39147c05e34fca81922447ecc81a83.s1.eu.hivemq.cloud
+      - key: SKYGUARD_MQTT_PORT
+        value: "8883"
+      - key: SKYGUARD_MQTT_TOPIC
+        value: skyguard/aws/+/telemetry
+      - key: SKYGUARD_MQTT_TLS
+        value: "true"
+      - key: SKYGUARD_MQTT_USERNAME
+        sync: false
+      - key: SKYGUARD_MQTT_PASSWORD
+        sync: false
+      - key: SKYGUARD_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SKYGUARD_ML_ENABLED
+        value: "true"
+      - key: SKYGUARD_ML_CONFIDENCE_THRESHOLD
+        value: "0.70"
+      - key: SKYGUARD_ML_MIN_SAMPLES
+        value: "4"

@@ -1,0 +1,1 @@
+"""SkyGuard AI prototype backend."""
