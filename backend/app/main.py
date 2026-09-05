@@ -1,4 +1,5 @@
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime
 from .mqtt_service import MQTTService
@@ -113,6 +114,7 @@ def health():
         "detector_mode": ml_service.combined_mode,
         "ml": ml_service.status(),
         "mqtt": mqtt_service.status(),
+        "websocket_clients": len(engine.clients),
     }
 
 
@@ -454,7 +456,23 @@ async def ws_live(websocket: WebSocket):
             },
         })
         while True:
-            await websocket.receive_text()
+            try:
+                raw = await asyncio.wait_for(websocket.receive_text(), timeout=75.0)
+            except asyncio.TimeoutError:
+                # Frontend sends a heartbeat every 30 seconds.  A connection
+                # that is silent for 75 seconds is stale; remove it so it can
+                # never block future telemetry broadcasts.
+                break
+
+            try:
+                frame = json.loads(raw)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                frame = {}
+            if frame.get("type") == "ping":
+                await websocket.send_json({
+                    "type": "pong",
+                    "data": {"ts": frame.get("ts")},
+                })
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:

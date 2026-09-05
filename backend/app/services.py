@@ -140,16 +140,38 @@ class Engine:
         return datetime.now(timezone.utc).isoformat()
 
     async def publish(self, event_type, data):
+        """Broadcast without allowing one stale browser to stall telemetry.
+
+        A dead/slow WebSocket can otherwise keep ``send_json`` pending while
+        the live processing lock is held.  On a small Render instance that can
+        create an ever-growing MQTT processing backlog.  Bound every send and
+        evict clients that cannot accept a frame promptly.
+        """
         clients = tuple(self.clients)
         if not clients:
             return
+
+        async def send_with_timeout(client):
+            try:
+                await asyncio.wait_for(
+                    client.send_json({"type": event_type, "data": data}),
+                    timeout=2.0,
+                )
+                return None
+            except Exception as exc:
+                return exc
+
         results = await asyncio.gather(
-            *(client.send_json({"type": event_type, "data": data}) for client in clients),
-            return_exceptions=True,
+            *(send_with_timeout(client) for client in clients),
+            return_exceptions=False,
         )
         for client, result in zip(clients, results):
             if isinstance(result, Exception) and client in self.clients:
                 self.clients.remove(client)
+                try:
+                    await client.close()
+                except Exception:
+                    pass
 
     @staticmethod
     def _component_label(event):

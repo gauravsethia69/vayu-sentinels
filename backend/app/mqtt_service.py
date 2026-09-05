@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import ssl
+import threading
 from datetime import datetime, timezone
 
 try:
@@ -37,6 +38,10 @@ class MQTTService:
         self.last_message_at = None
         self.messages_received = 0
         self.messages_rejected = 0
+        self.messages_dropped_overload = 0
+        self.pending_processing = 0
+        self.max_pending_processing = 24
+        self._pending_lock = threading.Lock()
         self.available = mqtt is not None
         self.client = None
 
@@ -113,7 +118,26 @@ class MQTTService:
             if self.loop is None:
                 raise RuntimeError("FastAPI event loop unavailable")
 
-            future = asyncio.run_coroutine_threadsafe(self.processor(payload), self.loop)
+            # Never create an unbounded number of asyncio futures if the small
+            # cloud instance becomes temporarily slow.  Three AWS nodes publish
+            # continuously, so a stuck browser/socket must not be able to grow
+            # memory until Render becomes unresponsive.
+            with self._pending_lock:
+                if self.pending_processing >= self.max_pending_processing:
+                    self.messages_dropped_overload += 1
+                    logger.warning(
+                        "Dropping MQTT telemetry because processing backlog is full (%s pending)",
+                        self.pending_processing,
+                    )
+                    return
+                self.pending_processing += 1
+
+            try:
+                future = asyncio.run_coroutine_threadsafe(self.processor(payload), self.loop)
+            except Exception:
+                with self._pending_lock:
+                    self.pending_processing = max(0, self.pending_processing - 1)
+                raise
             future.add_done_callback(self._processing_done)
         except Exception:
             self.messages_rejected += 1
@@ -125,6 +149,9 @@ class MQTTService:
         except Exception:
             self.messages_rejected += 1
             logger.exception("MQTT telemetry processing failed")
+        finally:
+            with self._pending_lock:
+                self.pending_processing = max(0, self.pending_processing - 1)
 
     def status(self):
         return {
@@ -136,6 +163,9 @@ class MQTTService:
             "authenticated": bool(self.username),
             "messages_received": self.messages_received,
             "messages_rejected": self.messages_rejected,
+            "messages_dropped_overload": self.messages_dropped_overload,
+            "pending_processing": self.pending_processing,
+            "max_pending_processing": self.max_pending_processing,
             "last_connected_at": self.last_connected_at,
             "last_message_at": self.last_message_at,
             "dependency_error": None if self.available else "paho-mqtt not installed",
