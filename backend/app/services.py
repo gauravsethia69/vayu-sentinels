@@ -98,6 +98,7 @@ class Engine:
                 for node in NODES
             },
             last_sequence={},
+            last_uptime_ms={},
             seen_nodes=set(),
         )
 
@@ -122,6 +123,7 @@ class Engine:
         self.last_arrival = state.last_arrival
         self.arrival_intervals = state.arrival_intervals
         self.last_sequence = state.last_sequence
+        self.last_uptime_ms = state.last_uptime_ms
         self.seen_nodes = state.seen_nodes
 
     @property
@@ -450,25 +452,51 @@ class Engine:
         ):
             previous_intervals.append(interval)
 
-        sequence = (reading.get("device") or {}).get("sequence")
+        device = reading.get("device") or {}
+        sequence = device.get("sequence")
+        uptime_ms = device.get("uptime_ms")
         previous_sequence = state.last_sequence.get(node)
-        if sequence is not None and previous_sequence is not None:
-            if sequence <= previous_sequence:
-                events.append(
-                    state.detector.network_event(
-                        node, timestamp, "out_of_order_packet", sequence, previous_sequence + 1,
-                        f"sequence {sequence} arrived after sequence {previous_sequence}",
-                    )
-                )
-            elif sequence > previous_sequence + 1:
-                events.append(
-                    state.detector.network_event(
-                        node, timestamp, "packet_gap", sequence, previous_sequence + 1,
-                        f"missing sequence values between {previous_sequence} and {sequence}",
-                    )
-                )
-        if sequence is not None and (previous_sequence is None or sequence > previous_sequence):
+        previous_uptime_ms = state.last_uptime_ms.get(node)
+
+        # ESP32 sequence counters restart at zero when the board reboots.
+        # Treat a large uptime rollback plus a small restarted sequence as a
+        # device reboot, not as an out-of-order packet. A small uptime rollback
+        # can still occur when genuinely older packets arrive late, so it does
+        # not reset the sequence baseline.
+        reboot_detected = (
+            sequence is not None
+            and uptime_ms is not None
+            and previous_sequence is not None
+            and previous_uptime_ms is not None
+            and sequence <= 20
+            and uptime_ms + 5000 < previous_uptime_ms
+        )
+
+        if reboot_detected:
             state.last_sequence[node] = sequence
+            state.last_uptime_ms[node] = uptime_ms
+            reading["device_restart_detected"] = True
+        else:
+            if sequence is not None and previous_sequence is not None:
+                if sequence <= previous_sequence:
+                    events.append(
+                        state.detector.network_event(
+                            node, timestamp, "out_of_order_packet", sequence, previous_sequence + 1,
+                            f"sequence {sequence} arrived after sequence {previous_sequence}",
+                        )
+                    )
+                elif sequence > previous_sequence + 1:
+                    events.append(
+                        state.detector.network_event(
+                            node, timestamp, "packet_gap", sequence, previous_sequence + 1,
+                            f"missing sequence values between {previous_sequence} and {sequence}",
+                        )
+                    )
+            if sequence is not None and (previous_sequence is None or sequence > previous_sequence):
+                state.last_sequence[node] = sequence
+            if uptime_ms is not None and (previous_uptime_ms is None or uptime_ms >= previous_uptime_ms):
+                state.last_uptime_ms[node] = uptime_ms
+
         return events
 
     async def process(self, reading, peer_override=None):
