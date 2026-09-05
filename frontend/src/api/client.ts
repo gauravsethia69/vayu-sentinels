@@ -6,6 +6,10 @@ const legacyWebSocketBase = (import.meta.env.VITE_WS_BASE_URL || defaultWebSocke
 export const WS_URL = (import.meta.env.VITE_WS_URL || `${legacyWebSocketBase}/ws/live`).replace(/\/$/, "");
 export const AUTH_STORAGE_KEY = "skyguard_admin_session";
 
+// Keep every REST request bounded. On weak networks a request that never settles
+// must not hold the dashboard refresh lock forever.
+const REQUEST_TIMEOUT_MS = 7_000;
+
 export function getAdminToken() {
   try { return JSON.parse(sessionStorage.getItem(AUTH_STORAGE_KEY) || "null")?.token as string | undefined; }
   catch { return undefined; }
@@ -23,29 +27,50 @@ export class ApiError extends Error {
 
 export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getAdminToken();
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort("request-timeout"), REQUEST_TIMEOUT_MS);
 
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try {
-      const body = (await response.json()) as { detail?: string | Array<{ msg?: string }> };
-      if (typeof body.detail === "string") message = body.detail;
-      if (Array.isArray(body.detail)) message = body.detail.map((item) => item.msg).filter(Boolean).join(", ");
-    } catch {
-      // The status text is the safest fallback for a non-JSON response.
-    }
-    throw new ApiError(message, response.status);
+  const externalSignal = init.signal;
+  const forwardAbort = () => controller.abort(externalSignal?.reason);
+  if (externalSignal) {
+    if (externalSignal.aborted) forwardAbort();
+    else externalSignal.addEventListener("abort", forwardAbort, { once: true });
   }
 
-  return (await response.json()) as T;
+  try {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      ...init,
+      signal: controller.signal,
+      headers: {
+        Accept: "application/json",
+        ...(init.body ? { "Content-Type": "application/json" } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+
+    if (!response.ok) {
+      let message = `${response.status} ${response.statusText}`;
+      try {
+        const body = (await response.json()) as { detail?: string | Array<{ msg?: string }> };
+        if (typeof body.detail === "string") message = body.detail;
+        if (Array.isArray(body.detail)) message = body.detail.map((item) => item.msg).filter(Boolean).join(", ");
+      } catch {
+        // The status text is the safest fallback for a non-JSON response.
+      }
+      throw new ApiError(message, response.status);
+    }
+
+    return (await response.json()) as T;
+  } catch (cause) {
+    if (controller.signal.aborted && !externalSignal?.aborted) {
+      throw new ApiError("Request timed out. Retrying over the live connection.", 0);
+    }
+    throw cause;
+  } finally {
+    window.clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", forwardAbort);
+  }
 }
 
 export function postJson<T>(path: string, payload?: unknown): Promise<T> {

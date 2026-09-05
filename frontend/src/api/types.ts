@@ -344,7 +344,8 @@ export type WebSocketEventType =
   | "peer_failover_ended"
   | "maintenance_status"
   | "sensor_exposure"
-  | "multi_source_context";
+  | "multi_source_context"
+  | "pong";
 
 export interface VisionDetection {
   type: string;

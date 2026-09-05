@@ -134,6 +134,27 @@ function upsertEvent(events: AnomalyEvent[], incoming: AnomalyEvent) {
   return [incoming, ...events.filter((event) => eventIdentity(event) !== identity)].slice(0, 100);
 }
 
+function readingTime(reading: SensorReading | null | undefined) {
+  if (!reading) return 0;
+  const parsed = Date.parse(reading.received_at ?? reading.timestamp);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function chooseNewerReading(
+  current: SensorReading | null | undefined,
+  incoming: SensorReading | null | undefined,
+): SensorReading | null {
+  if (!current) return incoming ?? null;
+  if (!incoming) return current;
+  return readingTime(incoming) >= readingTime(current) ? incoming : current;
+}
+
+function newestIso(...values: Array<string | null | undefined>) {
+  const valid = values.filter((value): value is string => Boolean(value));
+  if (!valid.length) return null;
+  return valid.reduce((latest, value) => Date.parse(value) > Date.parse(latest) ? value : latest);
+}
+
 export function SkyGuardProvider({ children }: { children: ReactNode }) {
   const [mode] = useState<DataMode>("live");
   const [backendStatus, setBackendStatus] = useState<"checking" | "online" | "offline">("checking");
@@ -155,6 +176,72 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
   const [fieldNotice, setFieldNotice] = useState<{ title: string; message: string } | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
   const refreshInFlight = useRef(false);
+  const socketConnectedRef = useRef(false);
+
+  const markRestFailure = useCallback((cause: unknown) => {
+    // WebSocket is the primary live channel. A single slow REST request must
+    // not flip the whole dashboard OFFLINE while live telemetry is arriving.
+    if (socketConnectedRef.current) return;
+    setBackendStatus("offline");
+    setMqttStatus(null);
+    setError(cause instanceof Error ? cause.message : "Backend unavailable");
+  }, []);
+
+  const refreshLightweight = useCallback(async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    try {
+      let backendHealth;
+      try {
+        backendHealth = await api.getHealth();
+      } catch (cause) {
+        markRestFailure(cause);
+        return;
+      }
+
+      setBackendStatus("online");
+      setMqttStatus(backendHealth.mqtt);
+
+      try {
+        // While WebSocket is connected we only reconcile small status
+        // snapshots. Live readings themselves continue to arrive via WS.
+        const [nextSummary, nextHealth] = await Promise.all([
+          api.getDashboardSummary(),
+          api.getSensorHealth(),
+        ]);
+
+        setSummary((current) => withStationMetrics({
+          ...nextSummary,
+          nodes: nextSummary.nodes.map((node) => {
+            const currentNode = current.nodes.find((item) => item.node_id === node.node_id);
+            const currentLatest = isRealReading(currentNode?.latest) ? currentNode.latest : null;
+            const snapshotLatest = isRealReading(node.latest) ? node.latest : null;
+            return {
+              ...node,
+              // Latest-state-wins: a delayed REST response can never replace
+              // a newer reading that already arrived over WebSocket.
+              latest: chooseNewerReading(currentLatest, snapshotLatest),
+            };
+          }),
+        }));
+        setHealth(nextHealth);
+        setLastUpdatedAt((current) => newestIso(
+          current,
+          backendHealth.mqtt.last_message_at,
+          ...nextSummary.nodes.map((node) => node.latest?.received_at ?? node.latest?.timestamp),
+        ));
+        setError(null);
+      } catch (cause) {
+        // Keep live WS state visible on a transient REST timeout.
+        if (!socketConnectedRef.current) {
+          setError(cause instanceof Error ? cause.message : "Status refresh delayed");
+        }
+      }
+    } finally {
+      refreshInFlight.current = false;
+      setLoading(false);
+    }
+  }, [markRestFailure]);
 
   const refresh = useCallback(async () => {
     if (refreshInFlight.current) return;
@@ -164,9 +251,7 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
       try {
         backendHealth = await api.getHealth();
       } catch (cause) {
-        setBackendStatus("offline");
-        setMqttStatus(null);
-        setError(cause instanceof Error ? cause.message : "Backend unavailable");
+        markRestFailure(cause);
         return;
       }
 
@@ -196,15 +281,20 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
           api.getMaintenance(),
         ]);
         const realLatestRows = latestRows.filter(isRealReading);
-        const mergedSummary = withStationMetrics({
+        setSummary((current) => withStationMetrics({
           ...nextSummary,
-          nodes: nextSummary.nodes.map((node) => ({
-            ...node,
-            latest: realLatestRows.find((reading) => reading.node_id === node.node_id) ?? node.latest,
-            communication_state: nextNodes.find((item) => item.node_id === node.node_id)?.communication_state ?? node.communication_state,
-          })),
-        });
-        setSummary(mergedSummary);
+          nodes: nextSummary.nodes.map((node) => {
+            const currentNode = current.nodes.find((item) => item.node_id === node.node_id);
+            const currentLatest = isRealReading(currentNode?.latest) ? currentNode.latest : null;
+            const restLatest = realLatestRows.find((reading) => reading.node_id === node.node_id)
+              ?? (isRealReading(node.latest) ? node.latest : null);
+            return {
+              ...node,
+              latest: chooseNewerReading(currentLatest, restLatest),
+              communication_state: nextNodes.find((item) => item.node_id === node.node_id)?.communication_state ?? node.communication_state,
+            };
+          }),
+        }));
         setEvents(nextEvents);
         setHealth(nextHealth);
         setTrusted((current) => mergeTrusted(
@@ -230,15 +320,17 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
           .filter(isRealReading)
           .map((reading) => reading.received_at ?? reading.timestamp)
           .sort((left, right) => Date.parse(right) - Date.parse(left))[0];
-        setLastUpdatedAt(backendHealth.mqtt.last_message_at ?? latestRealTimestamp ?? null);
+        setLastUpdatedAt((current) => newestIso(current, backendHealth.mqtt.last_message_at, latestRealTimestamp));
       } catch (cause) {
-        setError(cause instanceof Error ? cause.message : "Dashboard data could not be refreshed");
+        if (!socketConnectedRef.current) {
+          setError(cause instanceof Error ? cause.message : "Dashboard data could not be refreshed");
+        }
       }
     } finally {
       refreshInFlight.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [markRestFailure]);
 
   const handleSocketMessage = useCallback((message: WebSocketEnvelope) => {
     setBackendStatus("online");
@@ -372,7 +464,7 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
     }
 
     if (["peer_failover_started", "peer_failover_updated", "peer_failover_ended"].includes(message.type)) {
-      void refresh();
+      void refreshLightweight();
       return;
     }
 
@@ -380,22 +472,35 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
       const payload = message.data as { node_id: NodeId; sensors: MaintenanceStatus[] };
       setMaintenance((current) => [...current.filter((item) => item.node_id !== payload.node_id), ...payload.sensors]);
     }
-  }, [refresh]);
+  }, [refreshLightweight]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => void refresh(), socketStatus === "connected" ? 10_000 : 5_000);
+    // WebSocket is the primary live path. REST only reconciles health/summary
+    // periodically, which avoids bursts of requests on weak Wi-Fi.
+    const interval = window.setInterval(() => void refreshLightweight(), 40_000);
     return () => window.clearInterval(interval);
-  }, [refresh, socketStatus]);
+  }, [refreshLightweight]);
+
+  const handleSocketStatus = useCallback((status: ConnectionStatus) => {
+    socketConnectedRef.current = status === "connected";
+    setSocketStatus(status);
+    if (status === "connected") {
+      setBackendStatus("online");
+      // One lightweight reconciliation after reconnect; the in-flight guard
+      // prevents this from overlapping another refresh.
+      void refreshLightweight();
+    }
+  }, [refreshLightweight]);
 
   useEffect(() => {
-    const socket = new SkyGuardSocket({ onMessage: handleSocketMessage, onStatus: setSocketStatus });
+    const socket = new SkyGuardSocket({ onMessage: handleSocketMessage, onStatus: handleSocketStatus });
     socket.connect();
     return () => socket.stop();
-  }, [handleSocketMessage]);
+  }, [handleSocketMessage, handleSocketStatus]);
 
   const runCommand = useCallback(
     async <T,>(command: () => Promise<T>) => {
