@@ -1,9 +1,4 @@
-const defaultApiBase = "http://127.0.0.1:8000";
-const defaultWebSocketBase = "ws://127.0.0.1:8000";
-
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || defaultApiBase).replace(/\/$/, "");
-const legacyWebSocketBase = (import.meta.env.VITE_WS_BASE_URL || defaultWebSocketBase).replace(/\/$/, "");
-export const WS_URL = (import.meta.env.VITE_WS_URL || `${legacyWebSocketBase}/ws/live`).replace(/\/$/, "");
+import { getApiBaseUrl } from "./config";
 export const AUTH_STORAGE_KEY = "skyguard_admin_session";
 
 // Keep every REST request bounded. On weak networks a request that never settles
@@ -18,7 +13,7 @@ export function getAdminToken() {
 export class ApiError extends Error {
   status: number;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, public kind: "http" | "network" | "timeout" | "aborted" | "json" = "http") {
     super(message);
     this.name = "ApiError";
     this.status = status;
@@ -38,7 +33,8 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
+    const API_BASE_URL = getApiBaseUrl();
+    const response = await fetch(`${API_BASE_URL}/${path.replace(/^\/+/, "")}`, {
       ...init,
       signal: controller.signal,
       headers: {
@@ -61,12 +57,20 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
       throw new ApiError(message, response.status);
     }
 
-    return (await response.json()) as T;
+    if (response.status === 204) return undefined as T;
+    try {
+      return (await response.json()) as T;
+    } catch (cause) {
+      if (controller.signal.aborted) throw cause;
+      throw new ApiError("Backend returned invalid JSON.", response.status, "json");
+    }
   } catch (cause) {
     if (controller.signal.aborted && !externalSignal?.aborted) {
-      throw new ApiError("Request timed out. Retrying over the live connection.", 0);
+      throw new ApiError("Request timed out. Check backend reachability.", 0, "timeout");
     }
-    throw cause;
+    if (externalSignal?.aborted) throw new ApiError("Request cancelled.", 0, "aborted");
+    if (cause instanceof ApiError) throw cause;
+    throw new ApiError(`Backend request failed: ${cause instanceof Error ? cause.message : "network failure"}`, 0, "network");
   } finally {
     window.clearTimeout(timeout);
     externalSignal?.removeEventListener("abort", forwardAbort);
