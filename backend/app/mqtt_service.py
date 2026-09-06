@@ -44,17 +44,28 @@ class MQTTService:
         self._pending_lock = threading.Lock()
         self.available = mqtt is not None
         self.client = None
+        self.startup_error = None
+        self._started = False
 
         if not self.available:
             logger.warning("paho-mqtt is not installed; MQTT transport is disabled until dependencies are installed")
             return
 
+        try:
+            self._configure_client()
+        except Exception as exc:
+            self.startup_error = f"{type(exc).__name__}: {exc}"
+            self.client = None
+            logger.exception("Optional MQTT client configuration failed; REST remains available")
+
+    def _configure_client(self):
         self.client = mqtt.Client(
             mqtt.CallbackAPIVersion.VERSION2,
             client_id="skyguard-backend",
         )
         self.client.on_connect = self._on_connect
         self.client.on_disconnect = self._on_disconnect
+        self.client.on_connect_fail = self._on_connect_fail
         self.client.on_message = self._on_message
         self.client.reconnect_delay_set(min_delay=1, max_delay=10)
 
@@ -72,9 +83,18 @@ class MQTTService:
             logger.warning("MQTT start skipped because paho-mqtt is unavailable")
             return
 
+        if self._started:
+            return
         logger.info("Starting MQTT client → %s:%s (TLS=%s, auth=%s)", self.host, self.port, self.tls, bool(self.username))
-        self.client.connect_async(self.host, self.port, keepalive=60)
-        self.client.loop_start()
+        try:
+            self.client.connect_async(self.host, self.port, keepalive=60)
+            self.client.loop_start()
+            self._started = True
+            self.startup_error = None
+        except Exception as exc:
+            self.connected = False
+            self.startup_error = f"{type(exc).__name__}: {exc}"
+            logger.exception("Optional MQTT startup failed; REST remains available")
 
     def stop(self):
         if not self.available or self.client is None:
@@ -84,6 +104,8 @@ class MQTTService:
             self.client.disconnect()
         finally:
             self.client.loop_stop()
+            self.connected = False
+            self._started = False
 
     def _on_connect(self, client, userdata, flags, reason_code, properties):
         if reason_code == 0:
@@ -94,6 +116,10 @@ class MQTTService:
         else:
             self.connected = False
             logger.warning("MQTT connection failed: %s", reason_code)
+
+    def _on_connect_fail(self, client, userdata):
+        self.connected = False
+        logger.warning("MQTT broker %s:%s unavailable; background retry continues", self.host, self.port)
 
     def _on_disconnect(self, client, userdata, disconnect_flags, reason_code, properties):
         self.connected = False
@@ -169,4 +195,5 @@ class MQTTService:
             "last_connected_at": self.last_connected_at,
             "last_message_at": self.last_message_at,
             "dependency_error": None if self.available else "paho-mqtt not installed",
+            "startup_error": self.startup_error,
         }

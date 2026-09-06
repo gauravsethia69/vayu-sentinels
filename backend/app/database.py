@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import logging
 
 from .config import DATABASE_PATH
 
@@ -12,6 +13,14 @@ def connect():
 
 
 def init_db():
+    try:
+        _initialize_database()
+    except Exception:
+        logging.getLogger("uvicorn.error").exception("SkyGuard could not initialize SQLite at %s", DATABASE_PATH)
+        raise
+
+
+def _initialize_database():
     with connect() as db:
         db.execute("PRAGMA journal_mode = WAL")
         db.executescript('''

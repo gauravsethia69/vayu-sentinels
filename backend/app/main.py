@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from .mqtt_service import MQTTService
@@ -37,6 +38,8 @@ from .schemas import (
     VisionObservationIn,
 )
 from .services import engine
+
+logger = logging.getLogger("uvicorn.error")
 
 
 field_reports = FieldReportService(engine)
@@ -78,17 +81,24 @@ mqtt_service = MQTTService(
 
 @asynccontextmanager
 async def lifespan(app):
-    init_db()
-    await engine.start_monitor()
-
-    loop = asyncio.get_running_loop()
-    mqtt_service.start(loop)
-
     try:
+        init_db()
+    except Exception:
+        logger.exception("SkyGuard database initialization failed")
+        raise
+    logger.info("SkyGuard database initialized")
+    await engine.start_monitor()
+    logger.info("SkyGuard communication monitor started")
+    try:
+        mqtt_service.start(asyncio.get_running_loop())
+        logger.info("SkyGuard startup complete; optional MQTT connects in background")
         yield
     finally:
-        mqtt_service.stop()
-        await engine.shutdown()
+        try:
+            await asyncio.to_thread(mqtt_service.stop)
+        finally:
+            await engine.shutdown()
+            logger.info("SkyGuard shutdown complete")
 
 
 app = FastAPI(title="SkyGuard AI Backend", version="0.3.0", lifespan=lifespan)
@@ -444,6 +454,7 @@ async def ingest(body: ReadingIn):
 async def ws_live(websocket: WebSocket):
     await websocket.accept()
     engine.clients.append(websocket)
+    logger.debug("SkyGuard WebSocket connected (%s clients)", len(engine.clients))
     try:
         await websocket.send_json({
             "type": "system_status",
@@ -462,13 +473,14 @@ async def ws_live(websocket: WebSocket):
                 # Frontend sends a heartbeat every 30 seconds.  A connection
                 # that is silent for 75 seconds is stale; remove it so it can
                 # never block future telemetry broadcasts.
+                await websocket.close(code=1001, reason="heartbeat timeout")
                 break
 
             try:
                 frame = json.loads(raw)
             except (TypeError, ValueError, json.JSONDecodeError):
                 frame = {}
-            if frame.get("type") == "ping":
+            if isinstance(frame, dict) and frame.get("type") == "ping":
                 await websocket.send_json({
                     "type": "pong",
                     "data": {"ts": frame.get("ts")},
@@ -478,3 +490,4 @@ async def ws_live(websocket: WebSocket):
     finally:
         if websocket in engine.clients:
             engine.clients.remove(websocket)
+        logger.debug("SkyGuard WebSocket disconnected (%s clients)", len(engine.clients))
