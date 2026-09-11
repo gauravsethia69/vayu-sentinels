@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FieldReport } from "../api/types";
+import { NODE_IDS } from "../api/types";
+import { validEnvelope } from "../api/websocket";
 import { buildFieldReportPayload, filterFieldReports, initialFieldReportForm, verificationLabel } from "./model";
 
 const report = (status: FieldReport["status"], verification_state = "pending_sensor_confirmation") => ({
@@ -29,6 +31,22 @@ describe("field intelligence presentation", () => {
     });
     expect(payload.station_id).toBe("AWS_001");
     expect(payload.until_resolved).toBe(true);
+  });
+
+  it("uses one typed five-station list across frontend features", () => {
+    expect(NODE_IDS).toEqual(["AWS_001", "AWS_002", "AWS_003", "AWS_004", "AWS_005"]);
+    const payload = buildFieldReportPayload({
+      ...initialFieldReportForm,
+      target: "AWS_005",
+      observation: "AWS-005 enclosure needs inspection",
+    });
+    expect(payload.station_id).toBe("AWS_005");
+  });
+
+  it("accepts WebSocket data for new nodes and rejects unknown nodes", () => {
+    expect(validEnvelope({ type: "sensor_reading", data: { node_id: "AWS_004", timestamp: "2026-09-10T10:00:00Z" } })).toBe(true);
+    expect(validEnvelope({ type: "sensor_health", data: { node_id: "AWS_005" } })).toBe(true);
+    expect(validEnvelope({ type: "sensor_reading", data: { node_id: "AWS_999", timestamp: "2026-09-10T10:00:00Z" } })).toBe(false);
   });
 
   it("filters history without promoting reports to verified", () => {

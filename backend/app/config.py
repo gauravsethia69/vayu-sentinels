@@ -3,7 +3,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATABASE_PATH = Path(os.getenv("SKYGUARD_DATABASE_PATH", str(BASE_DIR / "skyguard.db"))).expanduser()
-NODES = ("AWS_001", "AWS_002", "AWS_003")
+NODES = ("AWS_001", "AWS_002", "AWS_003", "AWS_004", "AWS_005")
 MQTT_HOST = os.getenv("SKYGUARD_MQTT_HOST", "127.0.0.1")
 MQTT_PORT = int(os.getenv("SKYGUARD_MQTT_PORT", "1883"))
 MQTT_TOPIC = os.getenv("SKYGUARD_MQTT_TOPIC", "skyguard/aws/+/telemetry")
@@ -39,6 +39,13 @@ DEMO_ADMIN_PASSWORD = os.getenv("SKYGUARD_DEMO_ADMIN_PASSWORD", "23")
 DEMO_ADMIN_SESSION_MINUTES = int(os.getenv("SKYGUARD_DEMO_ADMIN_SESSION_MINUTES", "480"))
 
 PROTOTYPE_CLUSTER_ID = "prototype_cluster_01"
+
+
+def _optional_coordinate(environment_name):
+    value = os.getenv(environment_name, "").strip()
+    return float(value) if value else None
+
+
 STATION_LOCATIONS = {
     "AWS_001": {
         "latitude": 22.7196,
@@ -57,6 +64,22 @@ STATION_LOCATIONS = {
         "longitude": 75.8950,
         "cluster_id": PROTOTYPE_CLUSTER_ID,
         "location_label": "Central Plain Station",
+    },
+    # Coordinates for the new physical stations are intentionally unset until
+    # their surveyed deployment locations are configured. Cluster-scoped and
+    # station-scoped reports still work; coordinate-radius matching safely
+    # excludes stations whose location is unknown.
+    "AWS_004": {
+        "latitude": _optional_coordinate("SKYGUARD_AWS_004_LATITUDE"),
+        "longitude": _optional_coordinate("SKYGUARD_AWS_004_LONGITUDE"),
+        "cluster_id": PROTOTYPE_CLUSTER_ID,
+        "location_label": os.getenv("SKYGUARD_AWS_004_LOCATION_LABEL", "AWS-004 location not configured"),
+    },
+    "AWS_005": {
+        "latitude": _optional_coordinate("SKYGUARD_AWS_005_LATITUDE"),
+        "longitude": _optional_coordinate("SKYGUARD_AWS_005_LONGITUDE"),
+        "cluster_id": PROTOTYPE_CLUSTER_ID,
+        "location_label": os.getenv("SKYGUARD_AWS_005_LOCATION_LABEL", "AWS-005 location not configured"),
     },
 }
 

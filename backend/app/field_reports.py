@@ -80,6 +80,8 @@ class FieldReportService:
             distance = None
             relevant = False
             if report.get("latitude") is not None and report.get("longitude") is not None:
+                if station["latitude"] is None or station["longitude"] is None:
+                    continue
                 distance = haversine_km(
                     report["latitude"], report["longitude"], station["latitude"], station["longitude"]
                 )

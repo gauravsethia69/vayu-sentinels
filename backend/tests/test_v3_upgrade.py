@@ -174,7 +174,7 @@ def test_sensor_registry_inventory_and_maintenance_exposure(client):
     assert {item["model"] for item in specs} == {"DS18B20", "DHT22 / AM2302", "BMP280"}
     assert all(item["expected_service_life"] is None for item in specs)
     inventory = client.get("/sensor-inventory").json()
-    assert len(inventory) == 9
+    assert len(inventory) == 15
     assert len(client.get("/sensor-inventory/AWS_003").json()) == 3
     before = {item["sensor_id"]: item["maintenance_risk"] for item in client.get("/maintenance/AWS_001").json()["sensors"]}
     response = client.post("/vision/observations", json={"node_id": "AWS_001", "source": "simulated_camera", "detections": [{"type": "heavy_rain_visual", "confidence": 0.9}]})

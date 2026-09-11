@@ -154,7 +154,7 @@ class DemoLoginIn(BaseModel):
 class PublicReportCreate(BaseModel):
     category: str
     observation: str = Field(min_length=10, max_length=1200)
-    station_scope: list[str] = Field(default_factory=list, max_length=2)
+    station_scope: list[str] = Field(default_factory=list, max_length=len(NODES))
     direction: str | None = Field(default=None, max_length=20)
     severity: str = "moderate"
     reporter_confidence: str = "medium"

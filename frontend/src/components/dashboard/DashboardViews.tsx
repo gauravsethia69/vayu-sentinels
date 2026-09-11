@@ -118,7 +118,7 @@ function NodeComparison() {
 
   return (
     <section className="glass-card comparison-card">
-      <PanelHeading eyebrow="Spatial consistency" title="Three-station consensus" action={<StatusPill state={temperatureSpread != null && temperatureSpread > 2 ? "warning" : "good"} />} />
+      <PanelHeading eyebrow="Spatial consistency" title="Station network consensus" action={<StatusPill state={temperatureSpread != null && temperatureSpread > 2 ? "warning" : "good"} />} />
       <div className="comparison-list">
         {comparisons.map(([label, field, unit]) => {
           const values = summary.nodes.map((node) => node.latest?.[field]).filter((value): value is number => typeof value === "number");

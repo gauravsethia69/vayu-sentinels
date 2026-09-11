@@ -1,4 +1,5 @@
-export type NodeId = "AWS_001" | "AWS_002" | "AWS_003";
+export const NODE_IDS = ["AWS_001", "AWS_002", "AWS_003", "AWS_004", "AWS_005"] as const;
+export type NodeId = (typeof NODE_IDS)[number];
 export type Parameter = "temperature" | "humidity" | "pressure";
 export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected";
 export type DataMode = "live" | "demo";
@@ -201,6 +202,12 @@ export interface PeerFailover {
   confidence: number;
   reason: string;
   state?: string;
+  peer_count?: number;
+  available_peer_count?: number;
+  excluded_nodes?: NodeId[];
+  consensus_value?: number;
+  spread?: number | null;
+  aggregation?: "median" | string;
 }
 
 export interface AnomalyEvent {

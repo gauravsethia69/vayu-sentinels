@@ -59,7 +59,13 @@ def test_public_report_creation_is_anonymous_and_listed(client):
     report = response.json()
     assert report["reporter_type"] == "community_user"
     assert report["reporter_name"] is None
-    assert {node["node_id"] for node in report["nearby_stations"]} == {"AWS_001", "AWS_002", "AWS_003"}
+    assert {node["node_id"] for node in report["nearby_stations"]} == {
+    "AWS_001",
+    "AWS_002",
+    "AWS_003",
+    "AWS_004",
+    "AWS_005",
+     }
     assert report["id"] in {item["id"] for item in client.get("/public/reports").json()}
 
 

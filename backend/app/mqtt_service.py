@@ -145,7 +145,7 @@ class MQTTService:
                 raise RuntimeError("FastAPI event loop unavailable")
 
             # Never create an unbounded number of asyncio futures if the small
-            # cloud instance becomes temporarily slow.  Three AWS nodes publish
+            # cloud instance becomes temporarily slow. Configured AWS nodes publish
             # continuously, so a stuck browser/socket must not be able to grow
             # memory until Render becomes unresponsive.
             with self._pending_lock:

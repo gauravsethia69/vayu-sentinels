@@ -26,6 +26,7 @@ from .config import (
     NODES,
     PEER_FRESHNESS_SECONDS,
     PEER_FRESHNESS_MULTIPLIER,
+    PEER_AGREEMENT_TOLERANCES,
     PEER_MIN_SENSOR_HEALTH,
     PHYSICAL_RANGES,
     RECOVERY_HEALTHY_SAMPLES,
@@ -366,13 +367,15 @@ class Engine:
     def _recent_peer(self, node, peer_override, state):
         if peer_override is not None:
             return peer_override
-        peers = self.get_healthy_peers(node, state=state)
-        if not peers:
-            return None
-        result = {"node_id": "+".join(item["node_id"] for item in peers)}
+        result = {}
+        source_nodes = set()
         for parameter, key in (("temperature", "temperature_c"), ("humidity", "humidity_pct"), ("pressure", "pressure_hpa")):
-            values = [item["reading"].get(key) for item in peers if item["reading"].get(key) is not None]
-            result[key] = sum(values) / len(values) if values else None
+            consensus = self.peer_consensus(node, parameter, state=state)
+            result[key] = consensus["value"]
+            source_nodes.update(consensus["source_nodes"])
+        if not source_nodes:
+            return None
+        result["node_id"] = "+".join(peer for peer in NODES if peer in source_nodes)
         return result
 
     def get_healthy_peers(self, node_id, parameter=None, state=None):
@@ -407,6 +410,58 @@ class Engine:
                 peers.append({"node_id": peer_id, "reading": reading})
         return peers
 
+    def peer_consensus(self, node_id, parameter, state=None):
+        """Build a robust, availability-aware reference from eligible peers.
+
+        Two-peer behavior remains the arithmetic midpoint (also the median).
+        With three or more eligible peers, a tolerance-bounded MAD filter
+        prevents one extreme but otherwise healthy-looking node from pulling
+        the trusted estimate away from the consistent majority.
+        """
+        state = state or self._live_state
+        key = {
+            "temperature": "temperature_c",
+            "humidity": "humidity_pct",
+            "pressure": "pressure_hpa",
+        }[parameter]
+        peers = self.get_healthy_peers(node_id, parameter, state=state)
+        available = [
+            {"node_id": item["node_id"], "value": float(item["reading"][key])}
+            for item in peers
+        ]
+        contributors = available
+        if len(available) >= 3:
+            center = median(item["value"] for item in available)
+            deviations = [abs(item["value"] - center) for item in available]
+            mad = median(deviations)
+            tolerance = PEER_AGREEMENT_TOLERANCES[parameter]
+            cutoff = max(tolerance, 3.0 * mad)
+            filtered = [item for item in available if abs(item["value"] - center) <= cutoff]
+            if filtered:
+                contributors = filtered
+
+        values = [item["value"] for item in contributors]
+        source_nodes = [item["node_id"] for item in contributors]
+        excluded_nodes = [
+            peer_id for peer_id in NODES
+            if peer_id != node_id and peer_id not in source_nodes
+        ]
+        consensus_value = median(values) if values else None
+        confidence = min(96, 86 + 2 * len(contributors)) if len(contributors) >= 2 else 65 if contributors else 0
+        return {
+            "value": round(consensus_value, 3) if consensus_value is not None else None,
+            "consensus_value": round(consensus_value, 3) if consensus_value is not None else None,
+            "source_nodes": source_nodes,
+            "peer_count": len(contributors),
+            "available_peer_count": len(available),
+            "excluded_nodes": excluded_nodes,
+            "spread": round(max(values) - min(values), 3) if values else None,
+            "confidence": confidence,
+            "aggregation": "median",
+            # Retain the existing provenance strings for client compatibility.
+            "provenance": "peer_station_mean" if len(contributors) >= 2 else "single_peer_estimate" if contributors else None,
+        }
+
     async def _apply_peer_failover(self, reading, trusted, events, corrected_parameters, state, mode):
         node = reading["node_id"]
         event_parameters = {event.get("parameter") for event in events if event.get("parameter") in AVAILABLE_PARAMETERS}
@@ -419,19 +474,25 @@ class Engine:
                     await self.publish(event_type, {**previous, "ended_at": reading["timestamp"], "status": "ended"})
                     state.peer_failovers[node].pop(parameter, None)
                 continue
-            peers = self.get_healthy_peers(node, parameter, state=state)
-            if not peers:
+            consensus = self.peer_consensus(node, parameter, state=state)
+            if not consensus["peer_count"]:
                 continue
             key = {"temperature": "temperature_c", "humidity": "humidity_pct", "pressure": "pressure_hpa"}[parameter]
-            values = [float(item["reading"][key]) for item in peers]
-            estimate = round(sum(values) / len(values), 3)
-            provenance = "peer_station_mean" if len(peers) >= 2 else "single_peer_estimate"
-            source_nodes = [item["node_id"] for item in peers]
+            estimate = consensus["value"]
+            provenance = consensus["provenance"]
+            source_nodes = consensus["source_nodes"]
+            peer_count = consensus["peer_count"]
             detail = {
                 "node_id": node, "parameter": parameter, "raw_value": reading.get(key),
                 "trusted_value": estimate, "provenance": provenance, "source_nodes": source_nodes,
-                "excluded_node": node, "confidence": 90 if len(peers) >= 2 else 65,
-                "reason": f"{node} {parameter} is anomalous or recovering; trusted value uses {len(peers)} healthy nearby peer station(s).",
+                "excluded_node": node, "confidence": consensus["confidence"],
+                "reason": f"{node} {parameter} is anomalous or recovering; trusted value uses {peer_count} healthy nearby peer station(s).",
+                "peer_count": peer_count,
+                "available_peer_count": consensus["available_peer_count"],
+                "excluded_nodes": consensus["excluded_nodes"],
+                "consensus_value": estimate,
+                "spread": consensus["spread"],
+                "aggregation": consensus["aggregation"],
                 "started_at": previous["started_at"] if previous else reading["timestamp"], "status": "active",
             }
             trusted[key] = estimate
@@ -880,7 +941,11 @@ class Engine:
             "total_readings": self.total,
             "anomaly_count": len(self.events),
             "anomalies_by_type": dict(Counter(event["anomaly_type"] for event in self.events)),
-            "active_nodes": sum(bool(self.hist[node]) for node in NODES),
+            "active_nodes": sum(
+                bool(self.hist[node])
+                and self.communication_state[node] != "communication_failure"
+                for node in NODES
+            ),
             "average_processing_latency_ms": round(sum(self.latencies) / len(self.latencies), 3) if self.latencies else 0,
             "communication_states": dict(self.communication_state),
             "peer_failovers_active": sum(len(items) for items in self.peer_failovers.values()),

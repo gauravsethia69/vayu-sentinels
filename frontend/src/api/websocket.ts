@@ -1,5 +1,5 @@
 import { getWebSocketUrl } from "./config";
-import type { ConnectionStatus, WebSocketEnvelope } from "./types";
+import { NODE_IDS, type ConnectionStatus, type WebSocketEnvelope } from "./types";
 
 interface SocketCallbacks {
   onMessage: (message: WebSocketEnvelope) => void;
@@ -20,7 +20,7 @@ const eventTypes = new Set([
   "peer_failover_started", "peer_failover_updated", "peer_failover_ended", "maintenance_status",
   "sensor_exposure", "multi_source_context", "pong",
 ]);
-const nodeIds = new Set(["AWS_001", "AWS_002", "AWS_003"]);
+const nodeIds = new Set<string>(NODE_IDS);
 const object = (value: unknown): value is Record<string, unknown> => Boolean(value && typeof value === "object" && !Array.isArray(value));
 
 export function validEnvelope(value: unknown): value is WebSocketEnvelope {

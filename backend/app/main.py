@@ -238,14 +238,8 @@ async def dashboard_summary():
 def peer_consensus(node_id: str):
     require_node(node_id)
     result = {"node_id": node_id, "parameters": {}}
-    for parameter, key in (("temperature", "temperature_c"), ("humidity", "humidity_pct"), ("pressure", "pressure_hpa")):
-        peers = engine.get_healthy_peers(node_id, parameter)
-        values = [item["reading"][key] for item in peers]
-        result["parameters"][parameter] = {
-            "value": round(sum(values) / len(values), 3) if values else None,
-            "source_nodes": [item["node_id"] for item in peers],
-            "provenance": "peer_station_mean" if len(peers) >= 2 else "single_peer_estimate" if peers else None,
-        }
+    for parameter in ("temperature", "humidity", "pressure"):
+        result["parameters"][parameter] = engine.peer_consensus(node_id, parameter)
     return result
 
 

@@ -24,6 +24,7 @@ import type {
   VisionStatus,
   WebSocketEnvelope,
 } from "../api/types";
+import { NODE_IDS } from "../api/types";
 import { eventIdentity } from "../utils/format";
 
 interface SkyGuardCommands {
@@ -60,13 +61,11 @@ export interface SkyGuardContextValue {
 
 export const SkyGuardContext = createContext<SkyGuardContextValue | null>(null);
 
-const nodeIds: NodeId[] = ["AWS_001", "AWS_002", "AWS_003"];
+const nodeIds: readonly NodeId[] = NODE_IDS;
 
-const emptyHistories: Record<NodeId, SensorReading[]> = {
-  AWS_001: [],
-  AWS_002: [],
-  AWS_003: [],
-};
+const emptyHistories = Object.fromEntries(
+  NODE_IDS.map((nodeId) => [nodeId, [] as SensorReading[]]),
+) as Record<NodeId, SensorReading[]>;
 
 const emptySummary: DashboardSummary = {
   system: { status: "awaiting_data", detector_mode: "heuristic_nonfreeze_safety" },
@@ -86,7 +85,9 @@ const emptySummary: DashboardSummary = {
     anomalies_by_type: {},
     active_nodes: 0,
     average_processing_latency_ms: 0,
-    communication_states: { AWS_001: "awaiting_data", AWS_002: "awaiting_data", AWS_003: "awaiting_data" },
+    communication_states: Object.fromEntries(
+      NODE_IDS.map((nodeId) => [nodeId, "awaiting_data"]),
+    ) as Record<NodeId, string>,
   },
 };
 

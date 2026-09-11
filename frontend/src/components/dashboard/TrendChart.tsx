@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { NodeId, Parameter, SensorReading, TrustedReading } from "../../api/types";
+import { NODE_IDS, type NodeId, type Parameter, type SensorReading, type TrustedReading } from "../../api/types";
 import { EmptyState, PanelHeading } from "./StatusUi";
 
 const fieldByParameter: Record<Parameter, keyof SensorReading> = {
@@ -25,6 +25,13 @@ const bands: Record<Parameter, [number, number]> = {
   humidity: [35, 90],
   pressure: [980, 1030],
 };
+const nodeColors: Record<NodeId, string> = {
+  AWS_001: "#3269AB",
+  AWS_002: "#82B5F0",
+  AWS_003: "#14B8A6",
+  AWS_004: "#8B5CF6",
+  AWS_005: "#F59E0B",
+};
 
 interface TrendChartProps {
   histories: Record<NodeId, SensorReading[]>;
@@ -36,8 +43,7 @@ interface TrendChartProps {
 
 export default function TrendChart({ histories, trusted, parameter, selectedNode = "AWS_001", compact = false }: TrendChartProps) {
   const data = useMemo(() => {
-    const nodeIds: NodeId[] = ["AWS_001", "AWS_002", "AWS_003"];
-    const nodeRows = nodeIds.map((nodeId) => histories[nodeId].slice(compact ? -24 : -60));
+    const nodeRows = NODE_IDS.map((nodeId) => histories[nodeId].slice(compact ? -24 : -60));
     const trustedNode = trusted.filter((item) => item.raw.node_id === selectedNode).slice(compact ? -24 : -60);
     const count = Math.max(...nodeRows.map((rows) => rows.length), trustedNode.length);
     const key = fieldByParameter[parameter];
@@ -48,15 +54,17 @@ export default function TrendChart({ histories, trusted, parameter, selectedNode
       const timestamp = readings.find(Boolean)?.timestamp ?? trustedPoint?.trusted.timestamp;
       const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
       const trustedValue = trustedPoint?.trusted[key];
-      return {
+      const row: Record<string, string | number | null> = {
         timestamp: timestamp ?? "",
         timeValue: Number.isNaN(parsed) ? index : parsed,
         time: Number.isNaN(parsed) ? `${index + 1}` : new Date(parsed).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
-        aws1: typeof readings[0]?.[key] === "number" ? readings[0][key] : null,
-        aws2: typeof readings[1]?.[key] === "number" ? readings[1][key] : null,
-        aws3: typeof readings[2]?.[key] === "number" ? readings[2][key] : null,
         trusted: typeof trustedValue === "number" ? trustedValue : null,
       };
+      NODE_IDS.forEach((nodeId, nodeIndex) => {
+        const value = readings[nodeIndex]?.[key];
+        row[nodeId] = typeof value === "number" ? value : null;
+      });
+      return row;
     });
   }, [compact, histories, parameter, selectedNode, trusted]);
 
@@ -101,9 +109,9 @@ export default function TrendChart({ histories, trusted, parameter, selectedNode
               contentStyle={{ background: "rgba(255,255,255,0.97)", border: "1px solid rgba(198,224,255,0.7)", borderRadius: 12, boxShadow: "0 8px 24px rgba(50,105,171,0.12)", fontSize: 14 }}
             />
             {!compact && <Legend wrapperStyle={{ fontSize: 13, color: "#1F4F82" }} />}
-            <Line type="natural" dataKey="aws1" name="AWS-001" stroke="#3269AB" strokeWidth={2} dot={false} connectNulls animationDuration={1100} />
-            <Line type="natural" dataKey="aws2" name="AWS-002" stroke="#82B5F0" strokeWidth={2} dot={false} connectNulls animationDuration={1100} />
-            <Line type="natural" dataKey="aws3" name="AWS-003" stroke="#14B8A6" strokeWidth={2} dot={false} connectNulls animationDuration={1100} />
+            {NODE_IDS.map((nodeId) => (
+              <Line key={nodeId} type="natural" dataKey={nodeId} name={nodeId.replace("_", "-")} stroke={nodeColors[nodeId]} strokeWidth={2} dot={false} connectNulls animationDuration={1100} />
+            ))}
             <Line type="natural" dataKey="trusted" name={`Trusted ${selectedNode.replace("_", "-")}`} stroke="#16a34a" strokeWidth={2} strokeDasharray="5 3" dot={false} connectNulls animationDuration={1100} />
           </LineChart>
         </ResponsiveContainer>

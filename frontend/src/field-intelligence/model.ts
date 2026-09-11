@@ -4,7 +4,9 @@ import type {
   FieldReportCreatePayload,
   FieldReportSeverity,
   ReporterConfidence,
+  NodeId,
 } from "../api/types";
+import { NODE_IDS } from "../api/types";
 
 export const weatherCategories: Array<{ value: FieldReportCategory; label: string }> = [
   ["clouds_approaching", "Clouds Approaching"], ["light_rain", "Light Rain"],
@@ -34,7 +36,7 @@ export const quickReports: Array<{ category: FieldReportCategory; label: string;
   { category: "communication_issue", label: "Communication Issue", observation: "Communication equipment appears unreliable." },
 ];
 
-export type ReportTarget = "AWS_001" | "AWS_002" | "AWS_003" | "both" | "custom";
+export type ReportTarget = NodeId | "both" | "custom";
 
 export interface FieldReportFormState {
   reportType: "weather" | "station";
@@ -84,7 +86,7 @@ export function buildFieldReportPayload(form: FieldReportFormState): FieldReport
     source: "controller_ui",
   };
   if (form.target === "both") payload.cluster_id = "prototype_cluster_01";
-  if (["AWS_001", "AWS_002", "AWS_003"].includes(form.target)) payload.station_id = form.target as FieldReportCreatePayload["station_id"];
+  if (NODE_IDS.includes(form.target as NodeId)) payload.station_id = form.target as NodeId;
   if (form.target === "custom") {
     payload.latitude = Number(form.latitude);
     payload.longitude = Number(form.longitude);

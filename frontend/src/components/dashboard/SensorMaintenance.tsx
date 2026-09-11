@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { ClipboardCheck, Database, Download, FileText, ShieldAlert } from "lucide-react"
 import { api } from "../../api/endpoints"
 import type { SensorSpec } from "../../api/types"
+import { NODE_IDS } from "../../api/types"
 import { useSkyGuard } from "../../hooks/useSkyGuard"
 import { displayNodeId, titleCase } from "../../utils/format"
 import { EmptyState, PanelHeading, StatusPill } from "./StatusUi"
@@ -21,7 +22,6 @@ export default function SensorMaintenance() {
   useEffect(() => {
     void api.getSensorSpecs().then(setSpecs)
   }, [])
-  const nodes = ["AWS_001", "AWS_002", "AWS_003"] as const
   const models = ["DS18B20", "DHT22", "BMP280"] as const
   return (
     <div className="dashboard-view-stack">
@@ -44,14 +44,14 @@ export default function SensorMaintenance() {
           <div className="maintenance-table">
             <div className="maintenance-row head">
               <strong>Sensor</strong>
-              {nodes.map((node) => (
+              {NODE_IDS.map((node) => (
                 <strong key={node}>{displayNodeId(node)}</strong>
               ))}
             </div>
             {models.map((model) => (
               <div className="maintenance-row" key={model}>
                 <strong>{model}</strong>
-                {nodes.map((node) => {
+                {NODE_IDS.map((node) => {
                   const item = rows.find(
                     (row) => row.node_id === node && row.model === model,
                   )

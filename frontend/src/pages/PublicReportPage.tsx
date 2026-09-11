@@ -17,6 +17,7 @@ import type {
   NodeId,
   ReporterConfidence,
 } from "../api/types"
+import { NODE_IDS } from "../api/types"
 import PublicShell from "../components/public/PublicShell"
 import { titleCase } from "../utils/format"
 
@@ -95,7 +96,7 @@ export default function PublicReportPage() {
     try {
       const station_scope: NodeId[] =
         scope === "both"
-          ? ["AWS_001", "AWS_002", "AWS_003"]
+          ? [...NODE_IDS]
           : scope === "unknown"
             ? []
             : [scope]
@@ -193,9 +194,9 @@ export default function PublicReportPage() {
               value={scope}
               onChange={(e) => setScope(e.target.value as typeof scope)}
             >
-                <option value="AWS_001">AWS-001</option>
-                <option value="AWS_002">AWS-002</option>
-                <option value="AWS_003">AWS-003</option>
+                {NODE_IDS.map((nodeId) => (
+                  <option key={nodeId} value={nodeId}>{nodeId.replace("_", "-")}</option>
+                ))}
                 <option value="both">All / Area-wide</option>
               <option value="unknown">Not Sure</option>
             </select>

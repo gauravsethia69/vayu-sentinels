@@ -7,7 +7,7 @@ import {
   TriangleAlert,
 } from "lucide-react"
 import { api } from "../../api/endpoints"
-import type { NodeId } from "../../api/types"
+import { NODE_IDS, type NodeId } from "../../api/types"
 import { useSkyGuard } from "../../hooks/useSkyGuard"
 import {
   displayNodeId,
@@ -16,7 +16,6 @@ import {
 } from "../../utils/format"
 import { EmptyState, PanelHeading, StatusPill } from "./StatusUi"
 
-const nodes: NodeId[] = ["AWS_001", "AWS_002", "AWS_003"]
 const GRID_W = 48
 const GRID_H = 32
 const ANALYZE_EVERY_MS = 700
@@ -369,7 +368,7 @@ export default function VisionIntelligence({
 
           <div className="vision-detector-panel">
             <div className="segmented-control compact">
-              {nodes.map((nodeId) => (
+              {NODE_IDS.map((nodeId) => (
                 <button
                   key={nodeId}
                   className={selectedNode === nodeId ? "active" : ""}
@@ -416,7 +415,7 @@ export default function VisionIntelligence({
       </section>
 
       <div className="vision-camera-grid">
-        {nodes.map((nodeId) => {
+        {NODE_IDS.map((nodeId) => {
           const status = statuses.find((item) => item.node_id === nodeId)
           const latest = status?.latest_analysis
           return (

@@ -3,7 +3,7 @@ import {
   CheckCircle2, CloudRain, Eye, Gauge, MapPinned, Plus, RadioTower,
   Send, ShieldQuestion, UserRound, Wind, Wrench, X,
 } from "lucide-react";
-import type { FieldReport, FieldReportCategory } from "../../api/types";
+import { NODE_IDS, type FieldReport, type FieldReportCategory } from "../../api/types";
 import {
   buildFieldReportPayload, categoryKind, filterFieldReports, initialFieldReportForm,
   quickReports, stationCategories, verificationLabel, weatherCategories,
@@ -55,7 +55,7 @@ function SpatialNetwork({ report }: { report: FieldReport | null }) {
         <div className="spatial-report-node"><CloudRain size={18} /><strong>{report ? titleCase(report.category) : "No Active Report"}</strong><span>Field report</span></div>
         <div className="spatial-links"><span /><span /></div>
         <div className="spatial-stations">
-          {(["AWS_001", "AWS_002", "AWS_003"] as const).map((nodeId) => {
+          {NODE_IDS.map((nodeId) => {
             const station = report?.nearby_stations.find((item) => item.node_id === nodeId);
             return <div key={nodeId}><RadioTower size={17} /><strong>{displayNodeId(nodeId)}</strong><span>{station?.distance_km != null ? `${station.distance_km} km` : station ? "Cluster match" : "Outside report area"}</span></div>;
           })}
@@ -150,7 +150,7 @@ export default function FieldIntelligence({ onNotify }: { onNotify: (message: st
               <fieldset><legend>Report type</legend><div className="segmented-control"><button type="button" className={form.reportType === "weather" ? "active" : ""} onClick={() => setForm((current) => ({ ...current, reportType: "weather", category: "clouds_approaching", expiry: "60" }))}>Weather Observation</button><button type="button" className={form.reportType === "station" ? "active" : ""} onClick={() => setForm((current) => ({ ...current, reportType: "station", category: "sensor_damage", expiry: "until" }))}>AWS / Hardware Issue</button></div></fieldset>
               <label><span>Category</span><select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value as FieldReportCategory }))}>{(form.reportType === "weather" ? weatherCategories : stationCategories).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
               <label><span>Reporter</span><div className="input-with-icon"><UserRound size={14} /><input value={form.reporterName} onChange={(event) => setForm((current) => ({ ...current, reporterName: event.target.value }))} /></div></label>
-              <fieldset><legend>Location near</legend><div className="segmented-control field-targets">{(["AWS_001", "AWS_002", "AWS_003", "both", "custom"] as const).map((target) => <button type="button" className={form.target === target ? "active" : ""} onClick={() => setForm((current) => ({ ...current, target }))} key={target}>{target === "both" ? "All Stations" : target === "custom" ? "Custom" : displayNodeId(target)}</button>)}</div></fieldset>
+              <fieldset><legend>Location near</legend><div className="segmented-control field-targets">{([...NODE_IDS, "both", "custom"] as const).map((target) => <button type="button" className={form.target === target ? "active" : ""} onClick={() => setForm((current) => ({ ...current, target }))} key={target}>{target === "both" ? "All Stations" : target === "custom" ? "Custom" : displayNodeId(target)}</button>)}</div></fieldset>
               <label><span>Location description</span><input value={form.locationLabel} onChange={(event) => setForm((current) => ({ ...current, locationLabel: event.target.value }))} placeholder="North Ridge Sector" /></label>
               {form.target === "custom" && <div className="field-form-row"><label><span>Latitude</span><input required type="number" step="any" value={form.latitude} onChange={(event) => setForm((current) => ({ ...current, latitude: event.target.value }))} /></label><label><span>Longitude</span><input required type="number" step="any" value={form.longitude} onChange={(event) => setForm((current) => ({ ...current, longitude: event.target.value }))} /></label></div>}
               <label><span>Observation</span><textarea required minLength={3} value={form.observation} onChange={(event) => setForm((current) => ({ ...current, observation: event.target.value }))} placeholder="Dark clouds approaching rapidly from the west." /></label>

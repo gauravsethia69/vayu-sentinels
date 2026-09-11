@@ -14,7 +14,7 @@ const detectionFeatures = [
   { icon: "📡", title: "Data Loss", desc: "Flags missing packets and sensor silence across expected reporting windows.", wide: false },
   { icon: "🔌", title: "Communication Failure", desc: "Detects broken or degraded Wi-Fi links with extended packet gaps and RSSI anomalies.", wide: false },
   { icon: "⚖️", title: "Cross-Sensor Disagreement", desc: "Compares DS18B20, DHT22, and BMP280 readings for internal node consensus.", wide: false },
-  { icon: "🏔️", title: "Station-to-Station Inconsistency", desc: "Cross-validates AWS-001, AWS-002, and AWS-003 to isolate localized vs. environmental changes.", wide: true },
+  { icon: "🏔️", title: "Station-to-Station Inconsistency", desc: "Cross-validates the five-station AWS network to isolate localized vs. environmental changes.", wide: true },
   { icon: "📉", title: "Sensor Degradation", desc: "Tracks gradual health score decline indicating approaching hardware maintenance needs.", wide: false },
   { icon: "🌤️", title: "Genuine Weather Change", desc: "Confirms real environmental events by requiring coherent multi-sensor, multi-station agreement.", wide: false },
 ];
@@ -390,7 +390,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
                 color: "#3269AB",
                 bg: "rgba(50,105,171,0.06)",
                 title: "Coherent Multi-Station Movement",
-                desc: "All three stations and redundant sensors move coherently. All three sensor types support the change. SkyGuard classifies this as a genuine environmental event.",
+                desc: "The station network and redundant sensors move coherently. All three sensor types support the change. SkyGuard classifies this as a genuine environmental event.",
               },
               {
                 emoji: "⚠️",
@@ -398,7 +398,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
                 color: "#d97706",
                 bg: "rgba(217,119,6,0.06)",
                 title: "Isolated Sensor Divergence",
-                desc: "One sensor behaves differently from references and nearby stations. DS18B20 disagrees with DHT22 and BMP280. AWS-002 and AWS-003 remain stable. Anomaly confirmed.",
+                desc: "One sensor behaves differently from references and nearby stations. DS18B20 disagrees with DHT22 and BMP280. The nearby station network remains stable. Anomaly confirmed.",
               },
               {
                 emoji: "✅",

@@ -60,7 +60,8 @@ def test_create_read_and_persist_field_report(client):
     assert body["id"].startswith("FR-")
     assert body["status"] == "active"
     assert body["reporter_confidence"] == "high"
-    assert {station["node_id"] for station in body["nearby_stations"]} == {"AWS_001", "AWS_002", "AWS_003"}
+    assert {station["node_id"] for station in body["nearby_stations"]} == {"AWS_001", "AWS_002", "AWS_003","AWS_004",
+    "AWS_005",}
     assert client.get(f"/field-reports/{body['id']}").json()["observation"] == body["observation"]
     assert load_field_report(body["id"])["category"] == "clouds_approaching"
 
