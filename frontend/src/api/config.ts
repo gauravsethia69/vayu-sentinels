@@ -13,7 +13,7 @@ function baseUrl(value: string, protocols: string[]) {
 }
 
 export function getApiBaseUrl(env: RuntimeEnvironment = import.meta.env) {
-  return baseUrl(env.VITE_API_BASE_URL?.trim() || "http://127.0.0.1:8000", ["http:", "https:"]);
+  return baseUrl(env.VITE_API_BASE_URL?.trim() || "https://vayu-sentinels-backend.onrender.com", ["http:", "https:"]);
 }
 
 export function resolveRuntime(env: RuntimeEnvironment) {
