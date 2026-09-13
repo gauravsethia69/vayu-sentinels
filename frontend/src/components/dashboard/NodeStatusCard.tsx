@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { ChevronRight, CloudSun, RadioTower, Wrench } from "lucide-react";
+import { BrainCircuit, ChevronRight, CloudSun, RadioTower, Wrench } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import type { NodeSummary, SensorReading } from "../../api/types";
 import { displayNodeId, formatRelativeTime, formatValue, titleCase } from "../../utils/format";
@@ -16,6 +16,34 @@ function NodeStatusCard({ node, history, selected, onSelect }: NodeStatusCardPro
   const latest = node.latest;
   const sparkline = history.slice(-24).map((reading) => ({ value: reading.temperature_c }));
   const fieldContext = node.monitoring_context?.active_context[0];
+  const ai = latest?.ai_summary;
+  const rf = ai?.rf;
+  const pytorch = ai?.pytorch;
+  const pytorchSupported = pytorch?.supported ?? false;
+  const pytorchModelLabel = pytorch?.model_version
+    ? `PyTorch ${pytorch.model_version}`
+    : "PyTorch";
+  const latestTimestamp = latest?.received_at ?? latest?.timestamp;
+  const latestAgeMs = latestTimestamp ? Date.now() - Date.parse(latestTimestamp) : Number.POSITIVE_INFINITY;
+  const communicationBadgeState = !latest
+    ? "awaiting_data"
+    : node.communication_state === "awaiting_data"
+      ? latestAgeMs <= 120_000
+        ? "healthy"
+        : "data_available"
+      : node.communication_state;
+  const formatConfidence = (value?: number | null) =>
+    typeof value === "number" ? `${Math.round(value * 100)}%` : "—";
+  const pytorchConfirmed = Boolean(pytorch?.confirmed_fault || pytorch?.confirmed);
+  const aiAgreementLabel = ai?.agreement === true
+    ? "Models agree"
+    : ai?.agreement === false
+      ? pytorchConfirmed
+        ? "Models differ"
+        : "Low-confidence disagreement"
+      : !pytorchSupported
+        ? "RF only"
+        : "Awaiting AI";
 
   return (
     <article
@@ -29,7 +57,7 @@ function NodeStatusCard({ node, history, selected, onSelect }: NodeStatusCardPro
             <h3>{displayNodeId(node.node_id)}</h3>
           </div>
         </div>
-        <StatusPill state={latest ? node.communication_state : "awaiting_data"} />
+        <StatusPill state={communicationBadgeState} />
       </div>
 
       <div className="node-values">
@@ -55,13 +83,65 @@ function NodeStatusCard({ node, history, selected, onSelect }: NodeStatusCardPro
         </div>
         <div>
           <span>Communication</span>
-          <strong>{titleCase(node.communication_state)}</strong>
+          <strong>{titleCase(communicationBadgeState)}</strong>
           <small>{Math.round(node.communication_quality)}% link quality</small>
         </div>
         <div>
           <span>Last packet</span>
           <strong>{formatRelativeTime(latest?.received_at ?? latest?.timestamp)}</strong>
           <small>{titleCase(latest?.source ?? "source unavailable")}</small>
+        </div>
+      </div>
+
+      <div className="node-ai-summary" aria-label={`${displayNodeId(node.node_id)} AI assessment`}>
+        <div className="node-ai-summary-head">
+          <span><BrainCircuit size={14} /> AI validation</span>
+          <em className={ai?.agreement === true ? "agree" : ai?.agreement === false ? "differ" : "neutral"}>{aiAgreementLabel}</em>
+        </div>
+        <div className="node-ai-models">
+          <div>
+            <span>Hybrid RF v6</span>
+            <strong>{titleCase(rf?.normalized_prediction ?? rf?.prediction ?? (latest ? "awaiting RF" : "no data"))}</strong>
+            <small>{rf?.confidence != null ? `${formatConfidence(rf.confidence)} confidence` : latest ? "Waiting for model window" : "Waiting for telemetry"}</small>
+          </div>
+          <div>
+            <span>{pytorchModelLabel}</span>
+            {!pytorchSupported ? (
+              <>
+                <strong>Not available</strong>
+                <small>{pytorch?.reason ?? "PyTorch not enabled for this station"}</small>
+              </>
+            ) : (
+              <>
+                <strong>
+                  {pytorch?.prediction || pytorch?.normalized_prediction
+                    ? `${pytorchConfirmed ? "Confirmed" : "Raw"}: ${titleCase(
+                        pytorch?.normalized_prediction ?? pytorch?.prediction,
+                      )}`
+                    : titleCase(
+                        pytorch?.warming_up
+                          ? "warming up"
+                          : latest
+                            ? "awaiting AI"
+                            : "no data",
+                      )}
+                </strong>
+                <small>
+                  {pytorch?.confidence != null
+                    ? `${formatConfidence(pytorch.confidence)} confidence · ${
+                        pytorch?.confirmed_fault
+                          ? `Confirmed ${titleCase(pytorch.confirmed_fault)}`
+                          : pytorch?.confirmed
+                            ? "Confirmed fault"
+                            : "Unconfirmed"
+                      }`
+                    : latest
+                      ? "Waiting for temporal window"
+                      : "Waiting for telemetry"}
+                </small>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

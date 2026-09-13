@@ -1957,3 +1957,88 @@ button:not(:disabled):hover { filter: saturate(1.03); }
 .datasheet-library{padding:20px}.datasheet-library-note{margin:0 0 14px;color:#6b88a7;font-size:12px;line-height:1.5}.datasheet-card-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.datasheet-card{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;padding:14px;border:1px solid rgba(130,181,240,.28);background:rgba(238,247,255,.62);border-radius:9px}.datasheet-icon{width:36px;height:36px;border-radius:8px;background:#fff;border:1px solid rgba(130,181,240,.3);display:grid;place-items:center;color:#3269ab}.datasheet-card>div:nth-child(2){display:flex;flex-direction:column;gap:3px}.datasheet-card strong{color:#163b64}.datasheet-card span,.datasheet-card small{font-size:11px;color:#6b88a7}.datasheet-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.datasheet-actions a{display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid rgba(130,181,240,.35);border-radius:7px;background:rgba(255,255,255,.82);color:#3269ab;text-decoration:none;font-size:11px;font-weight:700}.datasheet-actions a:hover{background:#fff}
 
 @media(max-width:900px){.live-vision-layout{grid-template-columns:1fr}.datasheet-card-grid{grid-template-columns:1fr}}@media(max-width:620px){.live-camera-stage,.live-camera-stage video{min-height:240px}.vision-score-grid{grid-template-columns:1fr}.datasheet-card{grid-template-columns:34px 1fr}.datasheet-actions{grid-column:1/-1;justify-content:flex-start}}
+
+
+/* AI summary — frontend-safe RF + observational PyTorch comparison */
+.node-ai-summary {
+  margin-top: 10px;
+  padding: 10px 11px;
+  border: 1px solid rgba(50, 105, 171, 0.14);
+  border-radius: 10px;
+  background: rgba(50, 105, 171, 0.04);
+}
+.node-ai-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.node-ai-summary-head > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #3269AB;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.node-ai-summary-head em {
+  padding: 4px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+.node-ai-summary-head em.agree { background: rgba(22,163,74,.08); color: #15803d; }
+.node-ai-summary-head em.differ { background: rgba(217,119,6,.09); color: #b45309; }
+.node-ai-summary-head em.neutral { background: rgba(50,105,171,.08); color: #3269AB; }
+.node-ai-models {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.node-ai-models > div {
+  min-width: 0;
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: rgba(255,255,255,.72);
+}
+.node-ai-models span, .node-ai-models small {
+  display: block;
+  color: #82B5F0;
+  font-size: 12px;
+}
+.node-ai-models strong {
+  display: block;
+  margin: 2px 0;
+  overflow: hidden;
+  color: #1F4F82;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .node-ai-models { grid-template-columns: 1fr; }
+}
+
+
+/* =========================================================
+   Overview live-state consistency refinement
+   - Keep the first summary row fully visible after navigation.
+   - Reserve a consistent AI validation area on every AWS card.
+   ========================================================= */
+.dashboard-content {
+  scroll-padding-top: 18px;
+}
+
+.node-ai-summary {
+  min-height: 94px;
+}
+
+@media (max-width: 860px) {
+  .node-ai-summary {
+    min-height: 0;
+  }
+}

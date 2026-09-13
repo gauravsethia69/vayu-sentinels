@@ -3,7 +3,7 @@ import { Activity, CircleAlert, Database, Radio } from "lucide-react";
 
 export function stateTone(state?: string | null) {
   const normalized = (state ?? "").toLowerCase();
-  if (["healthy", "online", "connected", "validated", "running", "complete"].includes(normalized)) {
+  if (["healthy", "online", "connected", "validated", "running", "complete", "data_available"].includes(normalized)) {
     return { color: "#15803d", bg: "rgba(22,163,74,0.09)", border: "rgba(22,163,74,0.2)" };
   }
   if (["critical", "critical_inspection", "communication_failure", "offline", "disconnected"].includes(normalized)) {

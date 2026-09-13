@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from .pytorch_detector import pytorch_detector
 from contextlib import asynccontextmanager
 from datetime import datetime
 from .mqtt_service import MQTTService
@@ -123,6 +124,7 @@ def health():
         "service": "skyguard-backend",
         "detector_mode": ml_service.combined_mode,
         "ml": ml_service.status(),
+        "pytorch": pytorch_detector.status(),
         "mqtt": mqtt_service.status(),
         "websocket_clients": len(engine.clients),
     }

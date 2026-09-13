@@ -83,6 +83,11 @@ export default function Dashboard({ onBack, onLogout }: DashboardProps) {
   }, [toast]);
 
   useEffect(() => {
+    const content = document.getElementById("dashboard-main");
+    content?.scrollTo({ top: 0, behavior: "auto" });
+  }, [activeNav]);
+
+  useEffect(() => {
     if (!fieldNotice) return;
     setToast({ message: `${fieldNotice.title}: ${fieldNotice.message}`, tone: "success" });
     clearFieldNotice();

@@ -36,6 +36,7 @@ from .config import (
 from .database import init_db, save_event, save_health, save_reading
 from .detector import HeuristicDetector
 from .ml_detector import ml_service
+from .pytorch_detector import pytorch_detector
 
 
 
@@ -294,6 +295,86 @@ class Engine:
         state = state or self._live_state
         expected, _, _ = self.communication_timing(node, state)
         return max(PEER_FRESHNESS_SECONDS, expected * PEER_FRESHNESS_MULTIPLIER)
+
+    @staticmethod
+    def _normalize_ai_label(label):
+        if label is None:
+            return None
+
+        normalized = str(label).lower()
+        aliases = {
+            "temperature_spike": "spike",
+            "temperature_freeze": "freeze",
+            "temperature_drift": "drift",
+            "data_corruption": "corruption",
+            "sensor_missing": "data_loss",
+        }
+        return aliases.get(normalized, normalized)
+
+    def _build_ai_summary(self, ml_assessment, pytorch_assessment):
+        """Return a small frontend-friendly RF + PyTorch comparison.
+
+        This is observational only. It does not alter anomaly events, health,
+        trusted-value correction, or peer failover decisions.
+
+        PyTorch uses station-aware routing:
+        AWS_001 -> PyTorch V3
+        AWS_002 -> PyTorch V5
+        AWS_003 -> PyTorch V5
+
+        Unsupported nodes expose supported=False and agreement=None instead of
+        being presented as an RF/PyTorch disagreement.
+        """
+        ml_assessment = ml_assessment if isinstance(ml_assessment, dict) else {}
+        pytorch_assessment = (
+            pytorch_assessment if isinstance(pytorch_assessment, dict) else {}
+        )
+
+        rf_prediction = ml_assessment.get("prediction")
+        rf_confidence = ml_assessment.get("confidence")
+
+        pt_supported = bool(pytorch_assessment.get("supported", False))
+        pt_prediction = pytorch_assessment.get("prediction")
+        pt_confidence = pytorch_assessment.get("confidence")
+        pt_ready = bool(pytorch_assessment.get("ready", False))
+
+        rf_normalized = self._normalize_ai_label(rf_prediction)
+        pt_normalized = self._normalize_ai_label(pt_prediction)
+
+        agreement = None
+        if (
+            pt_supported
+            and pt_ready
+            and rf_normalized is not None
+            and pt_normalized is not None
+        ):
+            agreement = rf_normalized == pt_normalized
+
+        return {
+            "rf": {
+                "prediction": rf_prediction,
+                "normalized_prediction": rf_normalized,
+                "confidence": rf_confidence,
+                "source": ml_assessment.get("source"),
+            },
+            "pytorch": {
+                "supported": pt_supported,
+                "model": pytorch_assessment.get("model"),
+                "model_version": pytorch_assessment.get("model_version"),
+                "validation_role": pytorch_assessment.get("validation_role"),
+                "prediction": pt_prediction,
+                "normalized_prediction": pt_normalized,
+                "confidence": pt_confidence,
+                "ready": pt_ready,
+                "warming_up": bool(pytorch_assessment.get("warming_up", False)),
+                "confirmed": bool(pytorch_assessment.get("confirmed", False)),
+                "confirmed_fault": pytorch_assessment.get("confirmed_fault"),
+                "hard_fault": bool(pytorch_assessment.get("hard_fault", False)),
+                "hard_fault_type": pytorch_assessment.get("hard_fault_type"),
+            },
+            "agreement": agreement,
+            "decision_mode": "rf_primary_pytorch_observational",
+        }
 
     def _debounce_freeze_events(self, reading, events, assessment, state):
         """Allow only strongly supported ML temperature-freeze events.
@@ -607,6 +688,22 @@ class Engine:
         reading["ml_assessment"] = ml_assessment
         events = ml_service.fuse_events(reading, events, ml_assessment)
         events = self._debounce_freeze_events(reading, events, ml_assessment, state)
+
+        # PyTorch is additive/observational only.
+        # Station-aware routing is handled inside pytorch_detector:
+        # AWS_001 -> V3, AWS_002/AWS_003 -> V5.
+        # It does not create events, affect health, modify trusted values, or
+        # participate in peer failover.
+        pytorch_assessment = pytorch_detector.process(
+            node,
+            reading.get("sensors", {}),
+        )
+        reading["pytorch_assessment"] = pytorch_assessment
+        reading["ai_summary"] = self._build_ai_summary(
+            ml_assessment,
+            pytorch_assessment,
+        )
+
         events.extend(self._timing_events(reading, state))
 
         previous_communication = state.communication_state[node]
@@ -974,6 +1071,7 @@ class Engine:
                 "status": system_status,
                 "detector_mode": ml_service.combined_mode,
                 "ml_model": ml_service.status(),
+                "pytorch_model": pytorch_detector.status(),
             },
             "nodes": node_summaries,
             "recent_events": list(self.events)[:20],

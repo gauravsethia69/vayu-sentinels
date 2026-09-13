@@ -1,0 +1,36 @@
+SKYGUARD PYTORCH MULTICLASS v3 - TRAINING REPORT
+================================================
+
+Rows used: 1768
+Sequence length: 12 readings (~24 seconds)
+Validation macro-F1: 0.7397
+Held-out test accuracy: 0.8310
+Held-out test macro-F1: 0.8084
+Best epoch: 22
+
+Class counts:
+- normal: 969
+- spike: 184
+- freeze: 176
+- drift: 149
+- corruption: 152
+- data_loss: 138
+
+Per-class held-out metrics:
+- normal: precision=0.919, recall=0.828, f1=0.871, support=261
+- spike: precision=0.889, recall=1.000, f1=0.941, support=48
+- freeze: precision=0.463, recall=0.705, f1=0.559, support=44
+- drift: precision=1.000, recall=0.800, f1=0.889, support=20
+- corruption: precision=1.000, recall=0.625, f1=0.769, support=24
+- data_loss: precision=0.697, recall=1.000, f1=0.821, support=23
+
+v3 changes:
+- Added the new normal-weather readings from the current environment.
+- Windows are chronological and may include pre-fault context.
+- Sensor channels are modeled as change-from-window-start to reduce weather baseline bias.
+- Cross-sensor disagreement is also made relative to the window start.
+- Added first-difference channels and DS18B20 stuckness feature.
+- 3 consecutive non-normal predictions at >=70% confidence are required for confirmation.
+
+Important:
+- This is still an AWS_001 prototype model. Multi-station labelled data is needed before claiming broad production generalization.

@@ -129,6 +129,47 @@ export interface MLAssessment {
   window_span_seconds?: number;
 }
 
+export interface PyTorchAssessment {
+  enabled?: boolean;
+  supported: boolean;
+  node_id?: NodeId;
+  model?: string | null;
+  model_version?: string | null;
+  validation_role?: string | null;
+  reason?: string;
+  ready?: boolean;
+  warming_up?: boolean;
+  prediction?: string | null;
+  normalized_prediction?: string | null;
+  confidence?: number | null;
+  confirmed?: boolean;
+  confirmed_fault?: string | null;
+  hard_fault?: boolean;
+  hard_fault_type?: string | null;
+}
+
+export interface AISummary {
+  rf: {
+    prediction?: string | null;
+    normalized_prediction?: string | null;
+    confidence?: number | null;
+    source?: string | null;
+  };
+  pytorch: PyTorchAssessment;
+  agreement: boolean | null;
+  decision_mode: string;
+}
+
+export interface PyTorchStatus {
+  loaded: boolean;
+  enabled_node?: NodeId | string;
+  model?: string;
+  model_exists?: boolean;
+  error?: string | null;
+  classes?: string[];
+  sequence_length?: number;
+}
+
 export interface MLStatus {
   enabled: boolean;
   loaded: boolean;
@@ -173,6 +214,8 @@ export interface SensorReading {
   excluded_node?: NodeId;
   peer_failover?: PeerFailover;
   ml_assessment?: MLAssessment;
+  pytorch_assessment?: PyTorchAssessment;
+  ai_summary?: AISummary;
 }
 
 export interface NodeListItem {
@@ -283,6 +326,7 @@ export interface HealthResponse {
   service: string;
   detector_mode: string;
   ml?: MLStatus;
+  pytorch?: PyTorchStatus;
   mqtt: MqttStatus;
 }
 

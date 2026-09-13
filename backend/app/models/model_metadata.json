@@ -1,0 +1,50 @@
+{
+  "model_name": "SkyGuardTemporalCNN",
+  "model_version": "pytorch_multiclass_v3",
+  "classes": [
+    "normal",
+    "spike",
+    "freeze",
+    "drift",
+    "corruption",
+    "data_loss"
+  ],
+  "sensor_columns": [
+    "ds18b20_temperature_c",
+    "dht22_temperature_c",
+    "dht22_humidity_pct",
+    "bmp280_temperature_c",
+    "bmp280_pressure_hpa"
+  ],
+  "seq_len": 12,
+  "n_features": 14,
+  "sampling_interval_seconds_approx": 2.0,
+  "medians": {
+    "ds18b20_temperature_c": 27.94,
+    "dht22_temperature_c": 29.2,
+    "dht22_humidity_pct": 75.65,
+    "bmp280_temperature_c": 28.67,
+    "bmp280_pressure_hpa": 945.44
+  },
+  "scaler_mean": [
+    28.044547511312224,
+    29.470135746606335,
+    75.2158371040724,
+    28.703597285067872,
+    945.457669683258
+  ],
+  "scaler_scale": [
+    0.7311968115045633,
+    1.139188597338426,
+    3.7056790036972025,
+    0.3441481723291815,
+    0.12586982226816343
+  ],
+  "confirmation_windows": 3,
+  "recommended_min_confidence": 0.7,
+  "best_epoch": 22,
+  "validation_macro_f1": 0.7396983336752428,
+  "test_accuracy": 0.830952380952381,
+  "test_macro_f1": 0.8083751667717513,
+  "seed": 17
+}

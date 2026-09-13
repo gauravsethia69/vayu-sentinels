@@ -1,0 +1,94 @@
+{
+  "model": "skyguard_pytorch_multiclass_v6_2_recovery_aware.pt",
+  "csv_files": [
+    "AWS_001_LABELLED_CLEAN_V3.csv",
+    "AWS_001_EXTRA_REAL_RUN_2026_09_13.csv"
+  ],
+  "labels": [
+    "normal",
+    "spike",
+    "freeze",
+    "drift",
+    "corruption",
+    "data_loss"
+  ],
+  "feature_columns": [
+    "ds_clean",
+    "dht_clean",
+    "bmp_clean",
+    "humidity_clean",
+    "pressure_clean",
+    "ds_missing",
+    "ds_corrupt",
+    "ds_dht_diff",
+    "ds_bmp_diff",
+    "dht_bmp_diff",
+    "ds_clean_diff",
+    "dht_clean_diff",
+    "bmp_clean_diff",
+    "humidity_clean_diff",
+    "pressure_clean_diff",
+    "ds_range_5",
+    "dht_range_5",
+    "bmp_range_5",
+    "ds_range_12",
+    "dht_range_12",
+    "bmp_range_12"
+  ],
+  "sequence_length": 12,
+  "test_accuracy": 0.9788732394366197,
+  "test_macro_f1": 0.9788164121483834,
+  "best_val_macro_f1": 0.9899017749084044,
+  "raw_label_counts": {
+    "normal": 1039,
+    "freeze": 220,
+    "spike": 196,
+    "drift": 159,
+    "corruption": 156,
+    "data_loss": 144
+  },
+  "window_label_counts": {
+    "normal": 1017,
+    "spike": 196,
+    "freeze": 220,
+    "drift": 159,
+    "data_loss": 144,
+    "corruption": 156
+  },
+  "special_window_counts": {
+    "recovery_normal_windows": 159,
+    "boundary_windows": 606
+  },
+  "split_counts": {
+    "train": {
+      "normal": 712,
+      "freeze": 154,
+      "drift": 111,
+      "data_loss": 101,
+      "spike": 137,
+      "corruption": 109
+    },
+    "val": {
+      "freeze": 33,
+      "corruption": 23,
+      "normal": 152,
+      "data_loss": 22,
+      "spike": 30,
+      "drift": 24
+    },
+    "test": {
+      "spike": 29,
+      "normal": 153,
+      "freeze": 33,
+      "corruption": 24,
+      "drift": 24,
+      "data_loss": 21
+    }
+  },
+  "recovery_windows_in_split": {
+    "train": 117,
+    "val": 18,
+    "test": 24
+  },
+  "warning": "Candidate only. Compare against V3/V5 live routing before deployment."
+}

@@ -1,0 +1,139 @@
+{
+  "model": "skyguard_pytorch_multiclass_v6_3_multistation_recovery.pt",
+  "csv_sources": [
+    {
+      "path": "C:\\SIH\\SKYGUARD\\SkyGuard_FINAL_LIVE_HARDWARE_RELEASE\\backend\\app\\models\\AWS_001_LABELLED_CLEAN_V3.csv",
+      "default_condition": null,
+      "force_node_id": null
+    },
+    {
+      "path": "C:\\SIH\\SKYGUARD\\SkyGuard_FINAL_LIVE_HARDWARE_RELEASE\\backend\\app\\models\\AWS_001_EXTRA_REAL_RUN_2026_09_13.csv",
+      "default_condition": null,
+      "force_node_id": null
+    },
+    {
+      "path": "C:\\SIH\\SKYGUARD\\SkyGuard_FINAL_LIVE_HARDWARE_RELEASE\\backend\\app\\models\\AWS_2.csv",
+      "default_condition": "normal",
+      "force_node_id": "AWS_002"
+    },
+    {
+      "path": "C:\\SIH\\SKYGUARD\\SkyGuard_FINAL_LIVE_HARDWARE_RELEASE\\backend\\app\\models\\AWS_3.csv",
+      "default_condition": "normal",
+      "force_node_id": "AWS_003"
+    }
+  ],
+  "labels": [
+    "normal",
+    "spike",
+    "freeze",
+    "drift",
+    "corruption",
+    "data_loss"
+  ],
+  "feature_columns": [
+    "ds_clean",
+    "dht_clean",
+    "bmp_clean",
+    "humidity_clean",
+    "pressure_clean",
+    "ds_missing",
+    "ds_corrupt",
+    "ds_dht_diff",
+    "ds_bmp_diff",
+    "dht_bmp_diff",
+    "ds_clean_diff",
+    "dht_clean_diff",
+    "bmp_clean_diff",
+    "humidity_clean_diff",
+    "pressure_clean_diff",
+    "ds_range_5",
+    "dht_range_5",
+    "bmp_range_5",
+    "ds_range_12",
+    "dht_range_12",
+    "bmp_range_12"
+  ],
+  "sequence_length": 12,
+  "test_accuracy": 0.9948364888123924,
+  "test_macro_f1": 0.9911380194535915,
+  "best_val_macro_f1": 0.9973266332773146,
+  "raw_label_counts": {
+    "normal": 3039,
+    "freeze": 220,
+    "spike": 196,
+    "drift": 159,
+    "corruption": 156,
+    "data_loss": 144
+  },
+  "raw_node_counts": {
+    "AWS_001": 1914,
+    "AWS_002": 1000,
+    "AWS_003": 1000
+  },
+  "window_label_counts": {
+    "normal": 2995,
+    "spike": 196,
+    "freeze": 220,
+    "drift": 159,
+    "data_loss": 144,
+    "corruption": 156
+  },
+  "window_node_counts": {
+    "AWS_001": 1892,
+    "AWS_002": 989,
+    "AWS_003": 989
+  },
+  "special_window_counts": {
+    "recovery_normal_windows": 159,
+    "boundary_windows": 606
+  },
+  "split_counts": {
+    "train": {
+      "normal": 2097,
+      "freeze": 154,
+      "corruption": 109,
+      "spike": 137,
+      "data_loss": 101,
+      "drift": 111
+    },
+    "val": {
+      "drift": 24,
+      "normal": 449,
+      "freeze": 33,
+      "corruption": 23,
+      "data_loss": 22,
+      "spike": 29
+    },
+    "test": {
+      "data_loss": 21,
+      "normal": 449,
+      "freeze": 33,
+      "spike": 30,
+      "corruption": 24,
+      "drift": 24
+    }
+  },
+  "split_node_counts": {
+    "train": {
+      "AWS_001": 1328,
+      "AWS_002": 689,
+      "AWS_003": 692
+    },
+    "val": {
+      "AWS_001": 283,
+      "AWS_002": 149,
+      "AWS_003": 148
+    },
+    "test": {
+      "AWS_001": 281,
+      "AWS_002": 151,
+      "AWS_003": 149
+    }
+  },
+  "recovery_windows_in_split": {
+    "train": 123,
+    "val": 15,
+    "test": 21
+  },
+  "warning": "Candidate only. Must pass replay and shadow-live before deployment."
+}

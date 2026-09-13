@@ -7,3 +7,4 @@ paho-mqtt
 numpy>=2.0,<3
 scikit-learn==1.8.0
 joblib>=1.5,<2
+torch==2.14.0
