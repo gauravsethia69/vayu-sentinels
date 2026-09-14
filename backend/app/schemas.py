@@ -9,11 +9,13 @@ from .config import FIELD_REPORT_CATEGORIES, FIELD_REPORT_CONFIDENCES, FIELD_REP
 class SensorChannels(BaseModel):
     ds18b20_temperature_c: float | None = None
     dht22_temperature_c: float | None = Field(default=None, ge=-80, le=80)
-    dht22_humidity_pct: float | None = Field(default=None, ge=0, le=100)
+    # Preserve implausible physical values so the existing quality gate and
+    # EdgeGuard evidence can be recorded instead of rejecting the MQTT packet.
+    dht22_humidity_pct: float | None = None
     bmp180_temperature_c: float | None = Field(default=None, ge=-80, le=80)
     bmp180_pressure_hpa: float | None = Field(default=None, ge=300, le=1200)
     bmp280_temperature_c: float | None = Field(default=None, ge=-80, le=85)
-    bmp280_pressure_hpa: float | None = Field(default=None, ge=300, le=1100)
+    bmp280_pressure_hpa: float | None = None
 
     @model_validator(mode="after")
     def require_temperature(self):
@@ -41,6 +43,16 @@ class SimulationMetadata(BaseModel):
     mode: str | None = Field(default=None, max_length=60)
     trigger: str | None = Field(default=None, max_length=60)
 
+
+class EdgeAIMetadata(BaseModel):
+    enabled: bool = True
+    version: str = Field(default="EdgeGuard Lite v1", min_length=1, max_length=60)
+    local_decision: Literal["normal", "warning", "critical"]
+    risk_score: int = Field(ge=0, le=100)
+    reasons: list[str] = Field(default_factory=list, max_length=8)
+    local_action: Literal["none", "yellow_led", "red_led"]
+
+
 class ReadingIn(BaseModel):
     node_id: str
     timestamp: datetime | None = None
@@ -51,6 +63,7 @@ class ReadingIn(BaseModel):
     device: DeviceMetadata | None = None
     source: str = Field(default="esp32", min_length=1, max_length=40)
     simulation: SimulationMetadata | None = None
+    edge_ai: EdgeAIMetadata | None = None
 
     @model_validator(mode="after")
     def require_complete_shape(self):

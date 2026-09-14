@@ -148,6 +148,15 @@ export interface PyTorchAssessment {
   hard_fault_type?: string | null;
 }
 
+export interface EdgeAIAssessment {
+  enabled: boolean;
+  version: string;
+  local_decision: "normal" | "warning" | "critical" | "waiting";
+  risk_score: number | null;
+  reasons: string[];
+  local_action: "none" | "yellow_led" | "red_led" | "waiting";
+}
+
 export interface AISummary {
   rf: {
     prediction?: string | null;
@@ -156,6 +165,7 @@ export interface AISummary {
     source?: string | null;
   };
   pytorch: PyTorchAssessment;
+  edge?: EdgeAIAssessment;
   agreement: boolean | null;
   decision_mode: string;
 }
@@ -215,6 +225,7 @@ export interface SensorReading {
   peer_failover?: PeerFailover;
   ml_assessment?: MLAssessment;
   pytorch_assessment?: PyTorchAssessment;
+  edge_ai?: EdgeAIAssessment;
   ai_summary?: AISummary;
 }
 

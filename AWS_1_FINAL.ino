@@ -95,6 +95,82 @@ void setWarningLED();
 void setFaultLED();
 
 // =====================================================
+// EDGEGUARD LITE V1 — LOCAL SANITY / SAFETY ASSESSMENT
+// =====================================================
+struct EdgeGuardResult {
+  const char* localDecision;
+  int riskScore;
+  const char* localAction;
+  const char* reasons[5];
+  uint8_t reasonCount;
+  uint8_t warningCount;
+  uint8_t criticalCount;
+};
+
+void addEdgeWarning(EdgeGuardResult &result, const char* reason) {
+  if (result.reasonCount < 5) result.reasons[result.reasonCount++] = reason;
+  result.warningCount++;
+}
+
+void addEdgeCritical(EdgeGuardResult &result, const char* reason) {
+  if (result.reasonCount < 5) result.reasons[result.reasonCount++] = reason;
+  result.criticalCount++;
+}
+
+EdgeGuardResult evaluateEdgeGuard(
+  float txDs,
+  bool includeDs,
+  float dhtTemp,
+  float humidity,
+  float bmpTemp,
+  float pressure
+) {
+  EdgeGuardResult result;
+  result.localDecision = "normal";
+  result.riskScore = 0;
+  result.localAction = "none";
+  result.reasonCount = 0;
+  result.warningCount = 0;
+  result.criticalCount = 0;
+
+  bool dsInvalid = !includeDs || isnan(txDs) || txDs == DEVICE_DISCONNECTED_C || txDs < -40.0f || txDs > 85.0f;
+  if (dsInvalid) {
+    addEdgeCritical(result, "DS18B20 invalid or missing");
+  } else {
+    if (!isnan(dhtTemp) && fabsf(txDs - dhtTemp) > 4.0f) {
+      addEdgeWarning(result, "DS18B20 and DHT22 mismatch");
+    }
+    if (!isnan(bmpTemp) && fabsf(txDs - bmpTemp) > 4.0f) {
+      addEdgeWarning(result, "DS18B20 and BMP280 mismatch");
+    }
+  }
+
+  if (isnan(humidity) || humidity < 0.0f || humidity > 100.0f) {
+    addEdgeCritical(result, "humidity out of range");
+  }
+
+  if (isnan(pressure) || pressure < 300.0f || pressure > 1100.0f) {
+    addEdgeCritical(result, "pressure out of expected range");
+  } else if (pressure < 850.0f || pressure > 1050.0f) {
+    addEdgeWarning(result, "pressure out of expected range");
+  }
+
+  if (result.criticalCount > 0) {
+    result.localDecision = "critical";
+    result.localAction = "red_led";
+    result.riskScore = 80 + ((result.criticalCount - 1) * 10) + (result.warningCount * 5);
+    if (result.riskScore > 100) result.riskScore = 100;
+  } else if (result.warningCount > 0) {
+    result.localDecision = "warning";
+    result.localAction = "yellow_led";
+    result.riskScore = 40 + ((result.warningCount - 1) * 15);
+    if (result.riskScore > 70) result.riskScore = 70;
+  }
+
+  return result;
+}
+
+// =====================================================
 // CONTROLLED LOCAL FAULT STATE
 // =====================================================
 enum FaultMode {
@@ -144,6 +220,18 @@ const char* faultName(FaultMode mode) {
 
 bool faultActive() {
   return activeFault != FAULT_NONE;
+}
+
+void applyEdgeGuardLED(const EdgeGuardResult &result) {
+  if (strcmp(result.localDecision, "critical") == 0) {
+    setFaultLED();
+  } else if (strcmp(result.localDecision, "warning") == 0 || faultActive()) {
+    // Preserve the existing yellow controlled-test indicator when no edge
+    // critical condition has priority.
+    setWarningLED();
+  } else {
+    setNormalLED();
+  }
 }
 
 unsigned long durationForFault(FaultMode mode) {
@@ -352,7 +440,8 @@ void sendSensorData(
   float dhtTemp,
   float humidity,
   float bmpTemp,
-  float pressure
+  float pressure,
+  const EdgeGuardResult &edgeResult
 ) {
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("WiFi disconnected - MQTT not sent");
@@ -402,6 +491,24 @@ void sendSensorData(
   json += "\"sequence\":";
   json += String(sequenceNumber);
   json += "},";
+  json += "\"edge_ai\":{";
+  json += "\"enabled\":true,";
+  json += "\"version\":\"EdgeGuard Lite v1\",";
+  json += "\"local_decision\":\"";
+  json += edgeResult.localDecision;
+  json += "\",";
+  json += "\"risk_score\":";
+  json += String(edgeResult.riskScore);
+  json += ",\"reasons\":[";
+  for (uint8_t i = 0; i < edgeResult.reasonCount; i++) {
+    if (i > 0) json += ",";
+    json += "\"";
+    json += edgeResult.reasons[i];
+    json += "\"";
+  }
+  json += "],\"local_action\":\"";
+  json += edgeResult.localAction;
+  json += "\"},";
   json += "\"source\":\"esp32\"";
   json += "}";
 
@@ -409,7 +516,7 @@ void sendSensorData(
 
   if (published) {
     Serial.println("MQTT publish: OK");
-    if (faultActive()) setWarningLED(); else setNormalLED();
+    applyEdgeGuardLED(edgeResult);
   } else {
     Serial.println("MQTT publish: FAILED");
     setWarningLED();
@@ -549,13 +656,13 @@ void loop() {
       realPressure = bmp.readPressure() / 100.0f;
     }
 
-    bool physicalValid =
-      !isnan(realDsTemp) &&
+    bool referenceSensorsValid =
       !isnan(realDhtTemp) &&
       !isnan(realHumidity) &&
       !isnan(realBmpTemp) &&
-      !isnan(realPressure) &&
-      realDsTemp != DEVICE_DISCONNECTED_C;
+      !isnan(realPressure);
+    bool ds18b20Available =
+      !isnan(realDsTemp) && realDsTemp != DEVICE_DISCONNECTED_C;
 
     Serial.println("------------------------");
     Serial.print("REAL DS18B20: "); Serial.println(realDsTemp, 2);
@@ -564,24 +671,44 @@ void loop() {
     Serial.print("REAL BMP280 T: "); Serial.println(realBmpTemp, 2);
     Serial.print("REAL Pressure: "); Serial.println(realPressure, 2);
 
-    if (!physicalValid) {
-      Serial.println("REAL SENSOR READ ERROR - controlled injection NOT applied");
+    if (!referenceSensorsValid) {
+      Serial.println("REFERENCE SENSOR READ ERROR - controlled injection NOT applied");
       setFaultLED();
       delay(30);
       return;
     }
 
-    lastRealDsTemp = realDsTemp;
-    lastRealDsValid = true;
+    if (ds18b20Available) {
+      lastRealDsTemp = realDsTemp;
+      lastRealDsValid = true;
+    } else {
+      Serial.println("DS18B20 unavailable - publishing EdgeGuard critical status");
+    }
 
     // ----- Make a telemetry copy, then alter only that copy -----
     float txDsTemp = realDsTemp;
-    bool includeDs = true;
-    buildTelemetryDs(realDsTemp, txDsTemp, includeDs);
+    bool includeDs = ds18b20Available;
+    if (ds18b20Available) {
+      buildTelemetryDs(realDsTemp, txDsTemp, includeDs);
+    }
 
     Serial.print("TEST MODE: "); Serial.println(faultName(activeFault));
     Serial.print("TX DS18B20: ");
     if (includeDs) Serial.println(txDsTemp, 2); else Serial.println("OMITTED");
+
+    // EdgeGuard evaluates the exact values about to be published. It does not
+    // alter sensor readings, fault controls, MQTT routing, or cloud inference.
+    EdgeGuardResult edgeResult = evaluateEdgeGuard(
+      txDsTemp,
+      includeDs,
+      realDhtTemp,
+      realHumidity,
+      realBmpTemp,
+      realPressure
+    );
+    Serial.print("EDGEGUARD: "); Serial.print(edgeResult.localDecision);
+    Serial.print(" | risk="); Serial.println(edgeResult.riskScore);
+    applyEdgeGuardLED(edgeResult);
 
     // OLED intentionally shows the REAL local environment, not the injected copy.
     updateOLED(realDsTemp, realHumidity, realPressure);
@@ -592,7 +719,8 @@ void loop() {
       realDhtTemp,
       realHumidity,
       realBmpTemp,
-      realPressure
+      realPressure,
+      edgeResult
     );
   }
 

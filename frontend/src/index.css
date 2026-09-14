@@ -2019,6 +2019,23 @@ button:not(:disabled):hover { filter: saturate(1.03); }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.node-edge-ai {
+  display: grid;
+  gap: 3px;
+  margin-top: 8px;
+  padding: 8px 9px;
+  border: 1px solid rgba(50,105,171,.12);
+  border-radius: 8px;
+  background: rgba(255,255,255,.72);
+}
+.node-edge-ai > span { display: flex; align-items: center; gap: 5px; color: #3269AB; font-size: 12px; font-weight: 700; }
+.node-edge-ai strong { color: #1F4F82; font-size: 13px; }
+.node-edge-ai small { color: #6b88a7; font-size: 11px; line-height: 1.35; }
+.node-edge-ai.warning { border-color: rgba(217,119,6,.2); }
+.node-edge-ai.warning strong { color: #b45309; }
+.node-edge-ai.critical { border-color: rgba(220,38,38,.2); }
+.node-edge-ai.critical strong { color: #dc2626; }
+.judge-demo-note { margin: 14px 0 0; color: #6b88a7; font-size: 11px; line-height: 1.5; text-align: left; }
 @media (max-width: 560px) {
   .node-ai-models { grid-template-columns: 1fr; }
 }

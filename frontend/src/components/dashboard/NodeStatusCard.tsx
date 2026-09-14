@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { BrainCircuit, ChevronRight, CloudSun, RadioTower, Wrench } from "lucide-react";
+import { BrainCircuit, ChevronRight, CloudSun, Cpu, RadioTower, Wrench } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import type { NodeSummary, SensorReading } from "../../api/types";
 import { displayNodeId, formatRelativeTime, formatValue, titleCase } from "../../utils/format";
@@ -19,6 +19,8 @@ function NodeStatusCard({ node, history, selected, onSelect }: NodeStatusCardPro
   const ai = latest?.ai_summary;
   const rf = ai?.rf;
   const pytorch = ai?.pytorch;
+  const edge = ai?.edge ?? latest?.edge_ai;
+  const edgeWaiting = !edge?.enabled || edge.local_decision === "waiting";
   const pytorchSupported = pytorch?.supported ?? false;
   const pytorchModelLabel = pytorch?.model_version
     ? `PyTorch ${pytorch.model_version}`
@@ -142,6 +144,15 @@ function NodeStatusCard({ node, history, selected, onSelect }: NodeStatusCardPro
               </>
             )}
           </div>
+        </div>
+        <div className={`node-edge-ai ${edge?.local_decision ?? "waiting"}`}>
+          <span><Cpu size={13} /> {edge?.version ?? "EdgeGuard Lite v1"}</span>
+          {edgeWaiting ? (
+            <strong>Edge AI: Waiting for device data</strong>
+          ) : (
+            <strong>{titleCase(edge.local_decision)} · Risk {edge.risk_score ?? "—"}/100 · {titleCase(edge.local_action)}</strong>
+          )}
+          <small>{edge?.reasons?.length ? edge.reasons.join(" · ") : "Waiting for EdgeGuard data from hardware"}</small>
         </div>
       </div>
 

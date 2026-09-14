@@ -311,8 +311,8 @@ class Engine:
         }
         return aliases.get(normalized, normalized)
 
-    def _build_ai_summary(self, ml_assessment, pytorch_assessment):
-        """Return a small frontend-friendly RF + PyTorch comparison.
+    def _build_ai_summary(self, ml_assessment, pytorch_assessment, edge_assessment=None):
+        """Return a small frontend-friendly RF + PyTorch + edge summary.
 
         This is observational only. It does not alter anomaly events, health,
         trusted-value correction, or peer failover decisions.
@@ -329,6 +329,7 @@ class Engine:
         pytorch_assessment = (
             pytorch_assessment if isinstance(pytorch_assessment, dict) else {}
         )
+        edge_assessment = edge_assessment if isinstance(edge_assessment, dict) else None
 
         rf_prediction = ml_assessment.get("prediction")
         rf_confidence = ml_assessment.get("confidence")
@@ -371,6 +372,14 @@ class Engine:
                 "confirmed_fault": pytorch_assessment.get("confirmed_fault"),
                 "hard_fault": bool(pytorch_assessment.get("hard_fault", False)),
                 "hard_fault_type": pytorch_assessment.get("hard_fault_type"),
+            },
+            "edge": edge_assessment or {
+                "enabled": False,
+                "version": "EdgeGuard Lite v1",
+                "local_decision": "waiting",
+                "risk_score": None,
+                "reasons": ["Waiting for EdgeGuard data from hardware"],
+                "local_action": "waiting",
             },
             "agreement": agreement,
             "decision_mode": "rf_primary_pytorch_observational",
@@ -702,6 +711,7 @@ class Engine:
         reading["ai_summary"] = self._build_ai_summary(
             ml_assessment,
             pytorch_assessment,
+            reading.get("edge_ai"),
         )
 
         events.extend(self._timing_events(reading, state))
