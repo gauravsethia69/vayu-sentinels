@@ -1,4 +1,15 @@
 
 # Local backup zip files
 *.zip
+rontend/.pnpm-store/
+frontend/.npm-cache/
+frontend/node_modules/
+frontend/pnpm-lock.yaml
 
+backend/.test-deps/
+backend/.pytest_cache/
+backend/.pytest_runtime/
+backend/.venv/
+backend/venv/
+**/__pycache__/
+*.pyc
