@@ -1,4 +1,4 @@
-import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+﻿import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "../api/endpoints";
 import { ApiError } from "../api/client";
 import { SkyGuardSocket } from "../api/websocket";
@@ -220,7 +220,7 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
         setHealth(nextHealth);
         setLastUpdatedAt((current) => newestIso(
           current,
-          backendHealth.mqtt.last_message_at,
+          backendHealth?.mqtt?.last_message_at,
           ...nextSummary.nodes.map((node) => node.latest?.received_at ?? node.latest?.timestamp),
         ));
         if (!needsFullRefresh.current) setError(null);
@@ -317,7 +317,7 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
           .filter(isRealReading)
           .map((reading) => reading.received_at ?? reading.timestamp)
           .sort((left, right) => Date.parse(right) - Date.parse(left))[0];
-        setLastUpdatedAt((current) => newestIso(current, backendHealth.mqtt.last_message_at, latestRealTimestamp));
+        setLastUpdatedAt((current) => newestIso(current, backendHealth?.mqtt?.last_message_at, latestRealTimestamp));
       } catch (cause) {
         needsFullRefresh.current = true;
         setError(cause instanceof Error ? cause.message : "Dashboard data could not be refreshed");
@@ -607,3 +607,4 @@ export function SkyGuardProvider({ children }: { children: ReactNode }) {
 
   return <SkyGuardContext.Provider value={value}>{children}</SkyGuardContext.Provider>;
 }
+
