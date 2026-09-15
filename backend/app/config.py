@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
@@ -221,3 +221,4 @@ EVENT_HISTORY_MAXLEN = 500
 TRUSTED_HISTORY_MAXLEN = 500
 
 AVAILABLE_PARAMETERS = ("temperature", "humidity", "pressure")
+

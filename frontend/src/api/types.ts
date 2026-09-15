@@ -1,7 +1,7 @@
-﻿export const NODE_IDS = ["AWS_001", "AWS_002", "AWS_003", "AWS_004", "AWS_005"] as const;
+﻿export const NODE_IDS = ["AWS_001", "AWS_002", "AWS_003"] as const;
 
 export const LIVE_NODE_IDS = ["AWS_001", "AWS_002", "AWS_003"] as const;
-export const FUTURE_NODE_IDS = ["AWS_004", "AWS_005"] as const;
+export const FUTURE_NODE_IDS = [] as const;
 export type NodeId = (typeof NODE_IDS)[number];
 export type Parameter = "temperature" | "humidity" | "pressure";
 export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "disconnected";
@@ -499,6 +499,7 @@ export interface WebSocketEnvelope<T = unknown> {
   type: WebSocketEventType;
   data: T;
 }
+
 
 
 
