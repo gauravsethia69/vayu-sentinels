@@ -28,7 +28,10 @@ export const api = {
   login: (name: string, password: string) => postJson<AdminSession>("/auth/login", { name, password }),
   getAuthSession: () => request<Omit<AdminSession, "token">>("/auth/me"),
   logout: () => postJson<{ authenticated: false }>("/auth/logout"),
-  getHealth: (signal?: AbortSignal) => request<HealthResponse>("/ping", { signal, cache: "no-store" }),
+  getPing: (signal?: AbortSignal) =>
+    request<{ status: string; service: string; message?: string }>("/ping", { signal, cache: "no-store" }),
+  getHealth: (signal?: AbortSignal) =>
+    request<HealthResponse>("/health", { signal, cache: "no-store" }),
   getMlStatus: () => request<MLStatus>("/ml/status"),
   getNodes: () => request<NodeListItem[]>("/nodes"),
   getLatest: (nodeId: NodeId) => request<SensorReading>(`/nodes/${encodeURIComponent(nodeId)}/latest`),
@@ -68,4 +71,5 @@ export const api = {
   getMonitoringContexts: () => request<MonitoringContext[]>("/monitoring-context"),
   ingest: (payload: IngestPayload) => postJson<TrustedReading>("/ingest", payload),
 };
+
 

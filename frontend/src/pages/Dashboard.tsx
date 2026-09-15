@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -159,12 +159,12 @@ export default function Dashboard({ onBack, onLogout }: DashboardProps) {
       <div className="dashboard-main">
         <header className="dashboard-header">
           <div className="dashboard-title">
-            <p className="panel-eyebrow">SkyGuard AI · Live Monitoring Platform</p>
+            <p className="panel-eyebrow">SkyGuard AI Â· Live Monitoring Platform</p>
             <h1>{navItems.find((item) => item.id === activeNav)?.label}</h1>
           </div>
           <div className="dashboard-statuses">
             <StatusPill label="Backend" state={backendStatus} pulse={backendStatus === "online"} />
-            <StatusPill label="MQTT" state={mqttStatus ? (mqttStatus.connected ? "connected" : "disconnected") : "unavailable"} pulse={mqttStatus?.connected} />
+            <StatusPill label="MQTT" state={mqttStatus ? (mqttStatus?.connected ? "connected" : "disconnected") : "unavailable"} pulse={mqttStatus?.connected} />
             <StatusPill label="WebSocket" state={socketStatus} pulse={socketStatus === "connected"} />
             <span className="last-update-chip"><small>Last update</small><strong>{formatRelativeTime(lastUpdatedAt)}</strong></span>
           </div>
@@ -177,7 +177,8 @@ export default function Dashboard({ onBack, onLogout }: DashboardProps) {
       </div>
 
       <AnomalyDrawer event={drawerEvent} onClose={closeDrawer} />
-      {toast && <div className={`dashboard-toast ${toast.tone}`} role="status">{toast.tone === "success" ? "✓" : "!"}<span>{toast.message}</span></div>}
+      {toast && <div className={`dashboard-toast ${toast.tone}`} role="status">{toast.tone === "success" ? "âœ“" : "!"}<span>{toast.message}</span></div>}
     </div>
   );
 }
+

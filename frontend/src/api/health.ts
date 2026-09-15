@@ -1,51 +1,76 @@
-import { api } from "./endpoints";
+﻿import { api } from "./endpoints";
 import type { HealthResponse } from "./types";
 
 export type BackendStatus = "checking" | "online" | "offline";
-export const HEALTH_ONLINE_MS = 20_000;
+
+export const HEALTH_ONLINE_MS = 30_000;
 export const HEALTH_OFFLINE_MS = 4_000;
 
-/** One serial health loop. Dashboard queries and socket traffic cannot set it. */
+type HealthReporter = (
+  status: BackendStatus,
+  health?: HealthResponse | null,
+  error?: string | null
+) => void;
+
 export class HealthMonitor {
-  private stopped = true;
-  private timer: ReturnType<typeof setTimeout> | undefined;
-  private pending: Promise<HealthResponse | null> | undefined;
-  private controller: AbortController | undefined;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private stopped = false;
+  private controller: AbortController | null = null;
 
-  constructor(
-    private report: (status: BackendStatus, health: HealthResponse | null, error: string | null) => void,
-    private check = api.getHealth,
-  ) {}
+  constructor(private readonly report: HealthReporter) {}
 
-  start() { this.stopped = false; return this.probe(); }
-  stop() {
-    this.stopped = true;
-    clearTimeout(this.timer);
-    this.controller?.abort();
+  start() {
+    this.stopped = false;
+    void this.probe();
   }
 
-  probe(): Promise<HealthResponse | null> {
-    if (this.stopped) return Promise.resolve(null);
-    if (this.pending) return this.pending;
-    clearTimeout(this.timer);
+  stop() {
+    this.stopped = true;
+
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    if (this.controller) {
+      this.controller.abort();
+      this.controller = null;
+    }
+  }
+
+  async probe() {
+    if (this.stopped) return;
+
+    this.controller?.abort();
     this.controller = new AbortController();
-    this.pending = (async () => {
-      let health: HealthResponse | null = null;
-      let error: string | null = null;
+
+    let status: BackendStatus = "offline";
+    let health: HealthResponse | null = null;
+    let error: string | null = null;
+
+    try {
+      // Fast backend-online check.
+      await api.getPing(this.controller.signal);
+      status = "online";
+
+      // Optional detailed health. Failure here must not mark backend offline.
       try {
-        health = await this.check(this.controller!.signal);
-        if (health?.status !== "ok") throw new Error("Health response did not report status ok.");
-      } catch (cause) {
+        health = await api.getHealth(this.controller.signal);
+      } catch {
         health = null;
-        error = cause instanceof Error ? cause.message : "Backend health unavailable";
       }
-      if (!this.stopped) {
-        if (import.meta.env.DEV) console.debug(`[SkyGuard API] health ${health ? "success" : "failed"}`, error ?? "");
-        this.report(health ? "online" : "offline", health, error);
-        this.timer = setTimeout(() => void this.probe(), health ? HEALTH_ONLINE_MS : HEALTH_OFFLINE_MS);
-      }
-      return health;
-    })().finally(() => { this.pending = undefined; });
-    return this.pending;
+    } catch (cause) {
+      status = "offline";
+      error = cause instanceof Error ? cause.message : "Backend unavailable";
+    }
+
+    this.report(status, health, error);
+
+    if (!this.stopped) {
+      this.timer = setTimeout(
+        () => void this.probe(),
+        status === "online" ? HEALTH_ONLINE_MS : HEALTH_OFFLINE_MS
+      );
+    }
   }
 }
