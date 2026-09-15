@@ -18,6 +18,8 @@ from .config import (
     MQTT_USERNAME,
     MQTT_PASSWORD,
     MQTT_TLS,
+    MQTT_CLIENT_ID,
+    MQTT_KEEPALIVE_SECONDS,
     NODES,
 )
 from .auth import auth_service, require_admin
@@ -77,6 +79,8 @@ mqtt_service = MQTTService(
     username=MQTT_USERNAME,
     password=MQTT_PASSWORD,
     tls=MQTT_TLS,
+    client_id=MQTT_CLIENT_ID,
+    keepalive=MQTT_KEEPALIVE_SECONDS,
 )
 
 
@@ -117,12 +121,45 @@ def require_node(node_id):
         raise HTTPException(404, "Unknown node")
 
 
+@app.get("/")
+def root():
+    return {
+        "status": "SkyGuard backend running",
+        "service": "vayu-sentinels-backend",
+        "health": "/health",
+        "ping": "/ping",
+        "nodes": list(NODES),
+    }
+
+
+@app.get("/ping")
+def ping():
+    # Very light endpoint for Render health checks and cold-start testing.
+    # Do not call ML, database, MQTT status, or dashboard summary here.
+    return {
+        "status": "ok",
+        "service": "vayu-sentinels-backend",
+        "message": "pong",
+    }
+
+
+@app.get("/healthz")
+def healthz():
+    # Lightweight health check endpoint. Use this for platform health checks.
+    return {
+        "status": "ok",
+        "service": "vayu-sentinels-backend",
+    }
+
+
 @app.get("/health")
 def health():
+    # Full application health used by the dashboard/debugger.
+    # Kept safe so REST does not crash if an optional model is disabled.
     return {
         "status": "ok",
         "service": "skyguard-backend",
-        "detector_mode": ml_service.combined_mode,
+        "detector_mode": getattr(ml_service, "combined_mode", "unknown"),
         "ml": ml_service.status(),
         "pytorch": pytorch_detector.status(),
         "mqtt": mqtt_service.status(),

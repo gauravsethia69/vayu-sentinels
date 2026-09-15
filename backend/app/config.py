@@ -3,13 +3,20 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATABASE_PATH = Path(os.getenv("SKYGUARD_DATABASE_PATH", str(BASE_DIR / "skyguard.db"))).expanduser()
-NODES = ("AWS_001", "AWS_002", "AWS_003", "AWS_004", "AWS_005")
-MQTT_HOST = os.getenv("SKYGUARD_MQTT_HOST", "127.0.0.1")
+NODES = ("AWS_001", "AWS_002", "AWS_003")
+MQTT_HOST = os.getenv("SKYGUARD_MQTT_HOST", "127.0.0.1").strip()
 MQTT_PORT = int(os.getenv("SKYGUARD_MQTT_PORT", "1883"))
-MQTT_TOPIC = os.getenv("SKYGUARD_MQTT_TOPIC", "skyguard/aws/+/telemetry")
+MQTT_TOPIC = os.getenv("SKYGUARD_MQTT_TOPIC", "skyguard/aws/+/telemetry").strip()
 MQTT_USERNAME = os.getenv("SKYGUARD_MQTT_USERNAME", "").strip()
 MQTT_PASSWORD = os.getenv("SKYGUARD_MQTT_PASSWORD", "")
 MQTT_TLS = os.getenv("SKYGUARD_MQTT_TLS", "false").strip().lower() in ("1", "true", "yes", "on")
+MQTT_CLIENT_ID = os.getenv("SKYGUARD_MQTT_CLIENT_ID", "").strip()
+MQTT_KEEPALIVE_SECONDS = int(os.getenv("SKYGUARD_MQTT_KEEPALIVE_SECONDS", "30"))
+
+
+# PyTorch is optional for low-memory cloud deployments such as free Render.
+# Keep true locally for live AI demo. Set false on Render if the service hangs or times out during boot.
+PYTORCH_ENABLED = os.getenv("SKYGUARD_PYTORCH_ENABLED", "true").strip().lower() not in ("0", "false", "no", "off")
 
 # Hybrid Random-Forest anomaly layer. The backend remains fail-safe: if the
 # artifact or sklearn dependency is unavailable, heuristic-v2 continues alone.
@@ -26,10 +33,12 @@ _DEFAULT_CORS_ORIGINS = (
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://vayu-sentinels.vercel.app",
 )
+_cors_env = os.getenv("SKYGUARD_CORS_ORIGINS") or os.getenv("SKYGUARD_CORS_ALLOWED_ORIGINS")
 CORS_ALLOWED_ORIGINS = tuple(
-    origin.strip()
-    for origin in os.getenv("SKYGUARD_CORS_ALLOWED_ORIGINS", ",".join(_DEFAULT_CORS_ORIGINS)).split(",")
+    origin.strip().rstrip("/")
+    for origin in (_cors_env or ",".join(_DEFAULT_CORS_ORIGINS)).split(",")
     if origin.strip()
 )
 

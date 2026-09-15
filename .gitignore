@@ -13,3 +13,9 @@ backend/.venv/
 backend/venv/
 **/__pycache__/
 *.pyc
+
+backend/*.db
+backend/*.db-wal
+backend/*.db-shm
+backend/*old_stale*
+backend/.venv/
