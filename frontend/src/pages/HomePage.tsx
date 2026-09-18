@@ -44,7 +44,7 @@ const impacts = [
   { icon: "🌦️", title: "Weather Forecasting", desc: "Higher confidence environmental inputs improve forecast accuracy at regional stations." },
   { icon: "🚨", title: "Disaster Preparedness", desc: "Validated sensor data prevents false alarms and missed early-warning signals." },
   { icon: "🔧", title: "Sensor Maintenance", desc: "Early drift detection enables targeted maintenance before full sensor failure." },
-  { icon: "📡", title: "Remote AWS Monitoring", desc: "Deployed in hard-to-reach locations, SkyGuard reduces costly manual inspection trips." },
+  { icon: "📡", title: "Remote AWS Monitoring", desc: "Deployed in hard-to-reach locations, Vayu Sentinels reduces costly manual inspection trips." },
   { icon: "✅", title: "Data Quality Assurance", desc: "Trusted stream output ensures downstream models and reports use verified values." },
 ];
 
@@ -122,10 +122,10 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
               className="w-8 h-8 flex items-center justify-center text-white text-sm font-bold"
               style={{ background: "linear-gradient(135deg,#3269AB,#5792D7)", borderRadius: 10 }}
             >
-              S
+              V
             </div>
             <span style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 17, color: "#102A4A" }}>
-              SkyGuard AI
+              Vayu Sentinels
             </span>
           </div>
 
@@ -249,7 +249,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
             className="mt-6 text-base md:text-lg leading-relaxed mx-auto"
             style={{ color: "#1F4F82", maxWidth: 560, fontWeight: 400 }}
           >
-            SkyGuard AI distinguishes genuine environmental changes from faulty Automatic Weather Station sensor behavior in real time.
+            Vayu Sentinels distinguishes genuine environmental changes from faulty Automatic Weather Station sensor behavior in real time.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-8">
@@ -390,7 +390,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
                 color: "#3269AB",
                 bg: "rgba(50,105,171,0.06)",
                 title: "Coherent Multi-Station Movement",
-                desc: "The station network and redundant sensors move coherently. All three sensor types support the change. SkyGuard classifies this as a genuine environmental event.",
+                desc: "The station network and redundant sensors move coherently. All three sensor types support the change. Vayu Sentinels classifies this as a genuine environmental event.",
               },
               {
                 emoji: "⚠️",
@@ -444,7 +444,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
           <div className="text-center mb-16">
             <SectionLabel>Architecture</SectionLabel>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(31px, 4vw, 43px)", fontWeight: 600, color: "#102A4A", letterSpacing: "0" }}>
-              How SkyGuard Works
+              How Vayu Sentinels Works
             </h2>
             <p className="mt-3 text-base" style={{ color: "#1F4F82" }}>
               Two redundant AWS nodes feed a multi-layer detection and correction pipeline.
@@ -526,7 +526,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
           <div className="text-center mb-14">
             <SectionLabel>Detection Engine</SectionLabel>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(31px, 4vw, 43px)", fontWeight: 600, color: "#102A4A", letterSpacing: "0" }}>
-              What SkyGuard Detects
+              What Vayu Sentinels Detects
             </h2>
           </div>
 
@@ -782,7 +782,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
           <div className="text-center mb-14">
             <SectionLabel>Hardware Fault Testing</SectionLabel>
             <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(31px, 4vw, 43px)", fontWeight: 600, color: "#102A4A", letterSpacing: "0" }}>
-              Inject controlled faults into live telemetry<br />and let SkyGuard detect them.
+              Inject controlled faults into live telemetry<br />and let Vayu Sentinels detect them.
             </h2>
           </div>
 
@@ -926,7 +926,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
           >
             <div className="absolute top-0 left-0 right-0 h-1" style={{ background: "linear-gradient(90deg, #3269AB, #5792D7, #82B5F0)" }} />
             <div style={{ fontFamily: "var(--font-display)", fontSize: "clamp(29px, 3vw, 39px)", fontWeight: 700, color: "#102A4A", lineHeight: 1.15, marginBottom: 16 }}>
-              See SkyGuard AI operating<br />in real time.
+              See Vayu Sentinels operating<br />in real time.
             </div>
             <p className="mb-8 text-base" style={{ color: "#1F4F82" }}>
               The live dashboard connects directly to your AWS nodes via WebSocket.
@@ -958,9 +958,9 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
       <footer className="py-12 px-6" style={{ background: "#F8FBFF", borderTop: "1px solid rgba(198,224,255,0.5)" }}>
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg,#3269AB,#5792D7)", borderRadius: 8 }}>S</div>
+            <div className="w-7 h-7 flex items-center justify-center text-white text-xs font-bold" style={{ background: "linear-gradient(135deg,#3269AB,#5792D7)", borderRadius: 8 }}>V</div>
             <div>
-              <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, color: "#102A4A" }}>SkyGuard AI</p>
+              <p style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: 16, color: "#102A4A" }}>Vayu Sentinels</p>
               <p className="text-xs" style={{ color: "#82B5F0" }}>Smart India Hackathon Project</p>
             </div>
           </div>
@@ -979,7 +979,7 @@ export default function HomePage({ onOpenDashboard }: HomePageProps) {
             </button>
           </nav>
 
-          <p className="text-xs" style={{ color: "#A9CEFF" }}>© 2026 SkyGuard AI</p>
+          <p className="text-xs" style={{ color: "#A9CEFF" }}>© 2026 Vayu Sentinels</p>
         </div>
       </footer>
     </div>

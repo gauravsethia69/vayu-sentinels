@@ -16,9 +16,9 @@ export default function EntryPage() {
         <i />
       </div>
       <header className="entry-brand">
-        <span>S</span>
+        <span>V</span>
         <div>
-          <strong>SkyGuard AI</strong>
+          <strong>Vayu Sentinels</strong>
           <small>Resilient Weather Intelligence Network</small>
         </div>
         <em className={backendStatus}>
@@ -26,7 +26,7 @@ export default function EntryPage() {
         </em>
       </header>
       <section className="entry-hero">
-        <p>How would you like to use SkyGuard?</p>
+        <p>How would you like to use Vayu Sentinels?</p>
         <h1>
           One Weather Network.
           <br />
@@ -87,7 +87,7 @@ export default function EntryPage() {
           <p>AWS ADMIN</p>
           <h2>AWS Management Console</h2>
           <span>
-            Monitor sensors, diagnose anomalies and operate the SkyGuard
+            Monitor sensors, diagnose anomalies and operate the Vayu Sentinels
             network.
           </span>
           <div className="role-preview">

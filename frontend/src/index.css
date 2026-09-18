@@ -2054,6 +2054,44 @@ button:not(:disabled):hover { filter: saturate(1.03); }
   min-height: 94px;
 }
 
+/* Keep station values and their units inside every reusable sensor card. */
+.node-values > div,
+.sensor-values-list > div {
+  min-width: 0;
+}
+
+.node-values strong {
+  min-width: 0;
+  max-width: 100%;
+  font-size: clamp(15px, 1.15vw, 20px);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.sensor-values-list > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: baseline;
+}
+
+.sensor-values-list span,
+.sensor-values-list strong {
+  min-width: 0;
+}
+
+.sensor-values-list strong {
+  max-width: 100%;
+  font-size: clamp(15px, 1.1vw, 18px);
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+@media (max-width: 1500px) and (min-width: 1181px) {
+  .node-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 860px) {
   .node-ai-summary {
     min-height: 0;

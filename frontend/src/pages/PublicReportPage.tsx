@@ -132,7 +132,7 @@ export default function PublicReportPage() {
           <span>{submitted.location_label}</span>
           <strong>Under Verification</strong>
           <p>
-            SkyGuard will compare this observation with nearby AWS sensor
+            Vayu Sentinels will compare this observation with nearby AWS sensor
             trends. It does not alter station readings or detector output.
           </p>
           <Link to="/public/reports">View Community Reports</Link>
@@ -146,7 +146,7 @@ export default function PublicReportPage() {
           <p>COMMUNITY OBSERVATION</p>
           <h1>What are you observing?</h1>
           <span>
-            Your report provides context. SkyGuard independently compares it
+            Your report provides context. Vayu Sentinels independently compares it
             with nearby sensor evidence.
           </span>
         </header>

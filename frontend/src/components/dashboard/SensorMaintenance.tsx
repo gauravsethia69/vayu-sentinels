@@ -138,7 +138,7 @@ export default function SensorMaintenance() {
               <div>
                 <strong>{item.model}</strong>
                 <span>{item.title}</span>
-                <small>{item.installed ? "Used in current SkyGuard AWS prototype" : "Additional hardware reference"}</small>
+                <small>{item.installed ? "Used in current Vayu Sentinels AWS prototype" : "Additional hardware reference"}</small>
               </div>
               <div className="datasheet-actions">
                 <a href={item.href} target="_blank" rel="noreferrer">

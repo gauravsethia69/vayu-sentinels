@@ -129,8 +129,8 @@ export default function Dashboard({ onBack, onLogout }: DashboardProps) {
     <div className="dashboard-shell">
       <aside className="dashboard-sidebar" aria-label="Dashboard navigation">
         <div className="dashboard-brand">
-          <span>S</span>
-          <div><strong>SkyGuard AI</strong><small>Live Monitoring</small></div>
+          <span>V</span>
+          <div><strong>Vayu Sentinels</strong><small>Live Monitoring</small></div>
         </div>
 
         <nav className="dashboard-nav">
@@ -159,7 +159,7 @@ export default function Dashboard({ onBack, onLogout }: DashboardProps) {
       <div className="dashboard-main">
         <header className="dashboard-header">
           <div className="dashboard-title">
-            <p className="panel-eyebrow">SkyGuard AI Â· Live Monitoring Platform</p>
+            <p className="panel-eyebrow">Vayu Sentinels Â· Live Monitoring Platform</p>
             <h1>{navItems.find((item) => item.id === activeNav)?.label}</h1>
           </div>
           <div className="dashboard-statuses">
